@@ -1,0 +1,14 @@
+{
+  "lerna": "3.0.3",
+  "packages": [
+    "packages/aot",
+    "packages/debug",
+    "packages/jit",
+    "packages/kernel",
+    "packages/plugin-requirejs",
+    "packages/plugin-svg",
+    "packages/router",
+    "packages/runtime"
+  ],
+  "version": "0.2.0"
+}

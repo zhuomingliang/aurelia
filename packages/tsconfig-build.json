@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "lib": ["esnext", "dom"],
+    "module": "umd",
+    "moduleResolution": "node",
+    "sourceMap": false,
+    "stripInternal": true,
+    "target": "es2018"
+  }
+}
