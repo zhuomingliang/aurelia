@@ -1,12 +1,11 @@
-import { IContainer } from '@aurelia/kernel';
+import { IContainer, Reporter as RuntimeReporter } from '@aurelia/kernel';
 import { enableImprovedExpressionDebugging } from './binding/unparser';
 import { Reporter } from './reporter';
-import { enableImprovedTaskQueueDebugging} from './task-queue';
 
 export const DebugConfiguration = {
-  register(container: IContainer) {
+  register(container: IContainer): void {
     Reporter.write(2);
-    enableImprovedTaskQueueDebugging(container);
-    enableImprovedExpressionDebugging();    
+    Object.assign(RuntimeReporter, Reporter);
+    enableImprovedExpressionDebugging();
   }
 };

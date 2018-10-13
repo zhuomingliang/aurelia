@@ -1,13 +1,13 @@
 import { IIndexable, Primitive } from '@aurelia/kernel';
 import { DOM, INode } from '../dom';
 import { IChangeSet } from './change-set';
-import { IBindingTargetAccessor } from './observation';
+import { IBindingTargetAccessor, MutationKind } from './observation';
 import { targetObserver } from './target-observer';
+import { subscriberCollection } from './subscriber-collection';
 
 // tslint:disable-next-line:no-http-string
 const xlinkAttributeNS = 'http://www.w3.org/1999/xlink';
 
-// tslint:disable-next-line:interface-name
 export interface XLinkAttributeAccessor extends IBindingTargetAccessor<Element, string, string> {}
 
 @targetObserver('')
@@ -43,7 +43,6 @@ export class XLinkAttributeAccessor implements XLinkAttributeAccessor {
 
 XLinkAttributeAccessor.prototype.attributeName = '';
 
-// tslint:disable-next-line:interface-name
 export interface DataAttributeAccessor extends IBindingTargetAccessor<INode, string, string> {}
 
 @targetObserver()
@@ -73,7 +72,6 @@ export class DataAttributeAccessor implements DataAttributeAccessor {
   }
 }
 
-// tslint:disable-next-line:interface-name
 export interface StyleAttributeAccessor extends IBindingTargetAccessor<HTMLElement, 'style', string | IIndexable> {}
 
 @targetObserver()
@@ -159,7 +157,6 @@ StyleAttributeAccessor.prototype.styles = null;
 StyleAttributeAccessor.prototype.version = 0;
 StyleAttributeAccessor.prototype.propertyKey = 'style';
 
-// tslint:disable-next-line:interface-name
 export interface ClassAttributeAccessor extends IBindingTargetAccessor<INode, string, string> {}
 
 @targetObserver('')
@@ -229,27 +226,31 @@ ClassAttributeAccessor.prototype.doNotCache = true;
 ClassAttributeAccessor.prototype.version = 0;
 ClassAttributeAccessor.prototype.nameIndex = null;
 
-// tslint:disable-next-line:interface-name
-export interface PropertyAccessor extends IBindingTargetAccessor<IIndexable, string, Primitive | IIndexable> {}
+export interface ElementPropertyAccessor extends IBindingTargetAccessor<IIndexable, string, Primitive | IIndexable> {}
 
-@targetObserver()
-export class PropertyAccessor implements PropertyAccessor {
-  public currentValue: string;
-  public oldValue: string;
-  public defaultValue: string;
-
-  constructor(
-    public changeSet: IChangeSet,
-    public obj: IIndexable,
-    public propertyKey: string) {
-    this.oldValue = this.currentValue = obj[propertyKey];
-  }
+@targetObserver('')
+export class ElementPropertyAccessor implements ElementPropertyAccessor {
+  constructor(public changeSet: IChangeSet, public obj: IIndexable, public propertyKey: string) { }
 
   public getValue(): Primitive | IIndexable {
     return this.obj[this.propertyKey];
   }
 
   public setValueCore(value: Primitive | IIndexable): void {
+    this.obj[this.propertyKey] = value;
+  }
+}
+
+export interface PropertyAccessor extends IBindingTargetAccessor<IIndexable, string, Primitive | IIndexable> {}
+
+export class PropertyAccessor implements PropertyAccessor {
+  constructor(public obj: IIndexable, public propertyKey: string) { }
+
+  public getValue(): Primitive | IIndexable {
+    return this.obj[this.propertyKey];
+  }
+
+  public setValue(value: Primitive | IIndexable): void {
     this.obj[this.propertyKey] = value;
   }
 }

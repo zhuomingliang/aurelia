@@ -7,7 +7,19 @@ export interface IDisposable {
 }
 
 export type Constructable<T = {}> = {
+  // tslint:disable-next-line:no-any
   new(...args: any[]): T;
+};
+
+export type Decoratable<TOptional, TRequired> = Function & {
+  readonly prototype: Partial<TOptional> & Required<TRequired>;
+  // tslint:disable-next-line:no-any
+  new(...args: any[]): Partial<TOptional> & Required<TRequired>;
+};
+export type Decorated<TOptional, TRequired> = Function & {
+  readonly prototype: Required<TOptional> & Required<TRequired>;
+  // tslint:disable-next-line:no-any
+  new(...args: any[]): any;
 };
 
 export type Injectable<T = {}> = Constructable<T> & { inject?: any[] };
@@ -40,3 +52,9 @@ export type Writable<T> = {
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 
 export type Primitive = undefined | null | number | boolean | symbol | string;
+
+export type Unwrap<T> =
+    T extends (infer U)[] ? U :
+    T extends (...args: any[]) => infer U ? U :
+    T extends Promise<infer U> ? U :
+    T;

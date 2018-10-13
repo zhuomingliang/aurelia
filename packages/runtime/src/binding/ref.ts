@@ -1,20 +1,22 @@
 import { IServiceLocator } from '@aurelia/kernel';
-import { IExpression } from './ast';
+import { hasBind, hasUnbind, IsBindingBehavior, StrictAny } from './ast';
 import { IBinding, IBindingTarget } from './binding';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { IConnectableBinding } from './connectable';
 
+export interface Ref extends IConnectableBinding {}
 export class Ref implements IBinding {
   public $isBound: boolean = false;
-  private $scope: IScope;
+  public $scope: IScope;
 
   constructor(
-    public sourceExpression: IExpression,
+    public sourceExpression: IsBindingBehavior,
     public target: IBindingTarget,
     public locator: IServiceLocator) {
   }
 
-  public $bind(flags: BindingFlags, scope: IScope) {
+  public $bind(flags: BindingFlags, scope: IScope): void {
     if (this.$isBound) {
       if (this.$scope === scope) {
         return;
@@ -26,14 +28,15 @@ export class Ref implements IBinding {
     this.$isBound = true;
     this.$scope = scope;
 
-    if (this.sourceExpression.bind) {
-      this.sourceExpression.bind(flags, scope, this);
+    const sourceExpression = this.sourceExpression;
+    if (hasBind(sourceExpression)) {
+      sourceExpression.bind(flags, scope, this);
     }
 
     this.sourceExpression.assign(flags, this.$scope, this.locator, this.target);
   }
 
-  public $unbind(flags: BindingFlags) {
+  public $unbind(flags: BindingFlags): void {
     if (!this.$isBound) {
       return;
     }
@@ -44,12 +47,15 @@ export class Ref implements IBinding {
       this.sourceExpression.assign(flags, this.$scope, this.locator, null);
     }
 
-    if (this.sourceExpression.unbind) {
-      this.sourceExpression.unbind(flags, this.$scope, null);
+    const sourceExpression = this.sourceExpression;
+    if (hasUnbind(sourceExpression)) {
+      sourceExpression.unbind(flags, this.$scope, this);
     }
 
     this.$scope = null;
   }
-
-  public observeProperty(context: any, name: any) { }
+  // tslint:disable:no-empty no-any
+  public observeProperty(obj: StrictAny, propertyName: StrictAny): void { }
+  public handleChange(newValue: any, previousValue: any, flags: BindingFlags): void { }
+  // tslint:enable:no-empty no-any
 }

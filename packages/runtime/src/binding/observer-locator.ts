@@ -1,17 +1,18 @@
 import { DI, IIndexable, inject, Primitive, Reporter } from '@aurelia/kernel';
 import { DOM } from '../dom';
 import { getArrayObserver } from './array-observer';
+import { IBindingContext, IOverrideContext } from './binding-context';
 import { IChangeSet } from './change-set';
 import { createComputedObserver } from './computed-observer';
 import { IDirtyChecker } from './dirty-checker';
 import { CheckedObserver, SelectValueObserver, ValueAttributeObserver } from './element-observation';
 import { IEventManager } from './event-manager';
 import { getMapObserver } from './map-observer';
-import { AccessorOrObserver, CollectionKind, IBindingTargetAccessor, IBindingTargetObserver, ICollectionObserver, IObservable, IObservedArray, IObservedMap, IObservedSet } from './observation';
+import { AccessorOrObserver, CollectionKind, CollectionObserver, IBindingTargetAccessor, IBindingTargetObserver, ICollectionObserver, IObservable, IObservedArray, IObservedMap, IObservedSet } from './observation';
 import { PrimitiveObserver, SetterObserver } from './property-observation';
 import { getSetObserver } from './set-observer';
 import { ISVGAnalyzer } from './svg-analyzer';
-import { ClassAttributeAccessor, DataAttributeAccessor, PropertyAccessor, StyleAttributeAccessor, XLinkAttributeAccessor } from './target-accessors';
+import { ClassAttributeAccessor, DataAttributeAccessor, ElementPropertyAccessor, PropertyAccessor, StyleAttributeAccessor, XLinkAttributeAccessor } from './target-accessors';
 
 const toStringTag = Object.prototype.toString;
 
@@ -56,7 +57,10 @@ export class ObserverLocator implements IObserverLocator {
     private svgAnalyzer: ISVGAnalyzer
   ) {}
 
-  public getObserver(obj: IObservable, propertyName: string): AccessorOrObserver {
+  public getObserver(obj: IObservable | IBindingContext | IOverrideContext, propertyName: string): AccessorOrObserver {
+    if (obj.$synthetic === true) {
+      return obj.getObservers().getOrCreate(obj, propertyName);
+    }
     let observersLookup = obj.$observers;
     let observer;
 
@@ -84,7 +88,12 @@ export class ObserverLocator implements IObserverLocator {
   public getAccessor(obj: IObservable, propertyName: string): IBindingTargetAccessor {
     if (DOM.isNodeInstance(obj)) {
       const tagName = obj['tagName'];
+      // this check comes first for hot path optimization
+      if (propertyName === 'textContent') {
+        return new ElementPropertyAccessor(this.changeSet, obj, propertyName);
+      }
 
+      // TODO: optimize and make pluggable
       if (propertyName === 'class' || propertyName === 'style' || propertyName === 'css'
         || propertyName === 'value' && (tagName === 'INPUT' || tagName === 'SELECT')
         || propertyName === 'checked' && tagName === 'INPUT'
@@ -100,9 +109,10 @@ export class ObserverLocator implements IObserverLocator {
       ) {
         return new DataAttributeAccessor(this.changeSet, obj, propertyName);
       }
+      return new ElementPropertyAccessor(this.changeSet, obj, propertyName);
     }
 
-    return new PropertyAccessor(this.changeSet, obj, propertyName);
+    return new PropertyAccessor(obj, propertyName);
   }
 
   public getArrayObserver(array: IObservedArray): ICollectionObserver<CollectionKind.array> {
@@ -233,4 +243,16 @@ export class ObserverLocator implements IObserverLocator {
     }
     return new SetterObserver(obj, propertyName);
   }
+}
+
+export function getCollectionObserver(changeSet: IChangeSet, collection: IObservedMap | IObservedSet | IObservedArray): CollectionObserver {
+  switch (toStringTag.call(collection)) {
+    case '[object Array]':
+      return getArrayObserver(changeSet, <IObservedArray>collection);
+    case '[object Map]':
+      return getMapObserver(changeSet, <IObservedMap>collection);
+    case '[object Set]':
+      return getSetObserver(changeSet, <IObservedSet>collection);
+  }
+  return null;
 }

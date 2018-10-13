@@ -19,7 +19,6 @@ import {
   UpdateTriggerBindingBehavior,
   With
 } from '@aurelia/runtime';
-import { register } from './binding/expression-parser';
 import {
   CallBindingCommand,
   CaptureBindingCommand,
@@ -28,11 +27,12 @@ import {
   ForBindingCommand,
   FromViewBindingCommand,
   OneTimeBindingCommand,
+  ParserRegistration,
+  TemplateCompiler,
   ToViewBindingCommand,
   TriggerBindingCommand,
   TwoWayBindingCommand
-} from './templating/binding-command';
-import { TemplateCompiler } from './templating/template-compiler';
+} from '.';
 
 const globalResources: any[] = [
   Compose,
@@ -68,9 +68,9 @@ const defaultBindingLanguage: any[] = [
 ];
 
 export const BasicConfiguration = {
-  register(container: IContainer) {
-    register(container);
+  register(container: IContainer): void {
     container.register(
+      ParserRegistration,
       Registration.singleton(ITemplateCompiler, TemplateCompiler),
       ...globalResources,
       ...defaultBindingLanguage

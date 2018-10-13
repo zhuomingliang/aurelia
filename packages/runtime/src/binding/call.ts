@@ -1,19 +1,21 @@
-import { IServiceLocator } from '@aurelia/kernel';
+import { IIndexable, IServiceLocator, Primitive } from '@aurelia/kernel';
 import { INode } from '../dom';
-import { IExpression } from './ast';
-import { IBinding } from './binding';
+import { hasBind, hasUnbind, IsBindingBehavior, StrictAny } from './ast';
 import { IScope } from './binding-context';
 import { BindingFlags } from './binding-flags';
+import { IConnectableBinding } from './connectable';
 import { IAccessor } from './observation';
 import { IObserverLocator } from './observer-locator';
 
-export class Call implements IBinding {
+export interface Call extends IConnectableBinding {}
+export class Call {
   public $isBound: boolean = false;
+  public $scope: IScope;
+
   public targetObserver: IAccessor;
-  private $scope: IScope;
 
   constructor(
-    public sourceExpression: IExpression,
+    public sourceExpression: IsBindingBehavior,
     target: INode,
     targetProperty: string,
     observerLocator: IObserverLocator,
@@ -21,21 +23,19 @@ export class Call implements IBinding {
     this.targetObserver = observerLocator.getObserver(target, targetProperty);
   }
 
-  public callSource($event) {
-    let overrideContext = <any>this.$scope.overrideContext;
-    Object.assign(overrideContext, $event);
-    overrideContext.$event = $event; // deprecate this?
-    let result = this.sourceExpression.evaluate(BindingFlags.mustEvaluate, this.$scope, this.locator);
-    delete overrideContext.$event;
+  public callSource(args: IIndexable): Primitive | IIndexable {
+    const overrideContext = this.$scope.overrideContext;
+    Object.assign(overrideContext, args);
+    const result = this.sourceExpression.evaluate(BindingFlags.mustEvaluate, this.$scope, this.locator);
 
-    for (let prop in $event) {
+    for (const prop in args) {
       delete overrideContext[prop];
     }
 
     return result;
   }
 
-  public $bind(flags: BindingFlags, scope: IScope) {
+  public $bind(flags: BindingFlags, scope: IScope): void {
     if (this.$isBound) {
       if (this.$scope === scope) {
         return;
@@ -47,27 +47,31 @@ export class Call implements IBinding {
     this.$isBound = true;
     this.$scope = scope;
 
-    if (this.sourceExpression.bind) {
-      this.sourceExpression.bind(flags, scope, this);
+    const sourceExpression = this.sourceExpression;
+    if (hasBind(sourceExpression)) {
+      sourceExpression.bind(flags, scope, this);
     }
 
-    this.targetObserver.setValue($event => this.callSource($event), flags);
+    this.targetObserver.setValue($args => this.callSource($args), flags);
   }
 
-  public $unbind(flags: BindingFlags) {
+  public $unbind(flags: BindingFlags): void {
     if (!this.$isBound) {
       return;
     }
 
     this.$isBound = false;
 
-    if (this.sourceExpression.unbind) {
-      this.sourceExpression.unbind(flags, this.$scope, this);
+    const sourceExpression = this.sourceExpression;
+    if (hasUnbind(sourceExpression)) {
+      sourceExpression.unbind(flags, this.$scope, this);
     }
 
     this.$scope = null;
     this.targetObserver.setValue(null, flags);
   }
-
-  public observeProperty() { }
+  // tslint:disable:no-empty no-any
+  public observeProperty(obj: StrictAny, propertyName: StrictAny): void { }
+  public handleChange(newValue: any, previousValue: any, flags: BindingFlags): void { }
+  // tslint:enable:no-empty no-any
 }

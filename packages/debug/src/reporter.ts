@@ -9,12 +9,13 @@ const enum MessageType {
 
 interface IMessageInfo {
   message: string;
+  // tslint:disable-next-line:no-reserved-keywords
   type: MessageType;
 }
 
-export const Reporter: typeof RuntimeReporter = Object.assign(RuntimeReporter, {
+export const Reporter: typeof RuntimeReporter = {...RuntimeReporter,
   write(code: number, ...params: any[]): void {
-    let info = getMessageInfoForCode(code);
+    const info = getMessageInfoForCode(code);
 
     switch (info.type) {
       case MessageType.debug:
@@ -31,23 +32,22 @@ export const Reporter: typeof RuntimeReporter = Object.assign(RuntimeReporter, {
     }
   },
   error(code: number, ...params: any[]): Error {
-    let info = getMessageInfoForCode(code);
-    let error = new Error(info.message);
+    const info = getMessageInfoForCode(code);
+    const error = new Error(info.message);
     (<any>error).data = params;
     return error;
-  }
-});
+  }};
 
 function getMessageInfoForCode(code: number): IMessageInfo {
   return codeLookup[code] || createInvalidCodeMessageInfo(code);
 }
 
-function createInvalidCodeMessageInfo(code: number) {
+function createInvalidCodeMessageInfo(code: number): IMessageInfo {
   return {
     type: MessageType.error,
     message: `Attempted to report with unknown code ${code}.`
   };
-};
+}
 
 const codeLookup: Record<string, IMessageInfo> = {
   0: {
@@ -102,10 +102,6 @@ const codeLookup: Record<string, IMessageInfo> = {
     type: MessageType.error,
     message: 'Signal name is required.'
   },
-  13: {
-    type: MessageType.error,
-    message: 'TaskQueue long stack traces are only available in debug mode.'
-  },
   14: {
     type: MessageType.error,
     message: 'Property cannot be assigned.'
@@ -141,5 +137,69 @@ const codeLookup: Record<string, IMessageInfo> = {
   22: {
     type: MessageType.error,
     message: 'A containerless custom element cannot be the root component of an application.'
+  },
+  30: {
+    type: MessageType.error,
+    message: 'There are more targets than there are target instructions.'
+  },
+  31: {
+    type: MessageType.error,
+    message: 'There are more target instructions than there are targets.'
+  },
+  100: {
+    type: MessageType.error,
+    message: 'Invalid start of expression.'
+  },
+  101: {
+    type: MessageType.error,
+    message: 'Unconsumed token.'
+  },
+  102: {
+    type: MessageType.error,
+    message: 'Double dot and spread operators are not supported.'
+  },
+  103: {
+    type: MessageType.error,
+    message: 'Invalid member expression.'
+  },
+  104: {
+    type: MessageType.error,
+    message: 'Unexpected end of expression.'
+  },
+  105: {
+    type: MessageType.error,
+    message: 'Expected identifier.'
+  },
+  106: {
+    type: MessageType.error,
+    message: 'Invalid BindingIdentifier at left hand side of "of".'
+  },
+  107: {
+    type: MessageType.error,
+    message: 'Invalid or unsupported property definition in object literal.'
+  },
+  108: {
+    type: MessageType.error,
+    message: 'Unterminated quote in string literal.'
+  },
+  109: {
+    type: MessageType.error,
+    message: 'Unterminated template string.'
+  },
+  110: {
+    type: MessageType.error,
+    message: 'Missing expected token.'
+  },
+  111: {
+    type: MessageType.error,
+    message: 'Unexpected character.'
+  },
+  150: {
+    type: MessageType.error,
+    message: 'Left hand side of expression is not assignable.'
+  },
+  151: {
+    type: MessageType.error,
+    message: 'Unexpected keyword "of"'
   }
 };

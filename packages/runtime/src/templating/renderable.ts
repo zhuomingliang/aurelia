@@ -1,6 +1,7 @@
+/**
+ */
 import { DI } from '@aurelia/kernel';
 import { IScope } from '../binding/binding-context';
-import { BindingFlags } from '../binding/binding-flags';
 import { IBindScope } from '../binding/observation';
 import { INodeSequence } from '../dom';
 import { IAttach } from './lifecycle';
@@ -8,49 +9,58 @@ import { IRenderContext } from './render-context';
 
 export const IRenderable = DI.createInterface<IRenderable>().noDefault();
 
+/**
+ * An object containing the necessary information to render something for display.
+ */
 export interface IRenderable {
+  /**
+   * The (dependency) context of this instance.
+   *
+   * Contains any dependencies required by this instance or its children.
+   */
   readonly $context: IRenderContext;
+
+  /**
+   * The nodes that represent the visible aspect of this instance.
+   *
+   * Typically this will be a sequence of `DOM` nodes contained in a `DocumentFragment`
+   */
   readonly $nodes: INodeSequence;
+
+  /**
+   * The binding scope that the `$bindables` of this instance will be bound to.
+   *
+   * This includes the `BindingContext` which can be either a user-defined view model instance, or a synthetic view model instantiated by a `templateController`
+   */
   readonly $scope: IScope;
+
+  /**
+   * Indicates whether the `$scope` is bound to the `$bindables`
+   */
   readonly $isBound: boolean;
+
+  /**
+   * The Bindings, Views, CustomElements, CustomAttributes and other bindable components that belong to this instance.
+   */
   readonly $bindables: IBindScope[];
+
+  /**
+   * Indicates whether the `$attachables` are currently attached to the `DOM`.
+   */
   readonly $isAttached: boolean;
+
+  /**
+   * The Views, CustomElements, CustomAttributes and other attachable components that belong to this instance.
+   */
   readonly $attachables: IAttach[];
 
-  $addChild(child: IAttach | IBindScope, flags: BindingFlags): void;
-  $removeChild(child: IAttach | IBindScope): void;
-}
+  /**
+   * Add the `$nodes` of this instance to the Host or RenderLocation that this instance is attached to.
+   */
+  $addNodes(): void;
 
-/*@internal*/
-export function addRenderableChild(this: IRenderable, child: IAttach | IBindScope, flags: BindingFlags): void {
-  if ('$bind' in child) {
-    this.$bindables.push(child);
-
-    if (this.$isBound) {
-      child.$bind(flags, this.$scope);
-    }
-  }
-
-  if ('$attach' in child) {
-    this.$attachables.push(child);
-
-    if (this.$isAttached) {
-      child.$attach((this as any).$encapsulationSource);
-    }
-  }
-}
-
-/*@internal*/
-export function removeRenderableChild(this: IRenderable, child: IAttach | IBindScope): void {
-  const attachableIndex = this.$attachables.indexOf(child as IAttach);
-  if (attachableIndex !== -1) {
-    this.$attachables.splice(attachableIndex, 1);
-    (child as IAttach).$detach();
-  }
-
-  const bindableIndex = this.$bindables.indexOf(child as IBindScope);
-  if (bindableIndex !== -1) {
-    this.$bindables.splice(bindableIndex, 1);
-    (child as IBindScope).$unbind(BindingFlags.fromUnbind);
-  }
+  /**
+   * Remove the `$nodes` of this instance from the Host or RenderLocation that this instance is attached to, optionally returning them to a cache.
+   */
+  $removeNodes(): void;
 }

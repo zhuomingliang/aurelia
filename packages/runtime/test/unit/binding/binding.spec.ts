@@ -1,10 +1,12 @@
+import { BindingContext, Scope } from './../../../src/binding/binding-context';
 import { spy, SinonSpy } from 'sinon';
-import { AccessMember, PrimitiveLiteral, IExpression, ExpressionKind, IBindingTargetObserver, Binding, IBindingTarget, IObserverLocator, AccessScope, BindingMode, BindingFlags, BindingBehavior, IScope, IChangeSet, SubscriberFlags, IPropertySubscriber, IPropertyChangeNotifier, SetterObserver, PropertyAccessor, IBindingTargetAccessor, ObjectLiteral, AccessorOrObserver } from '../../../src/index';
+import { AccessMember, PrimitiveLiteral, IExpression, ExpressionKind, IBindingTargetObserver, Binding, IBindingTarget, IObserverLocator, AccessScope, BindingMode, BindingFlags, IScope, IChangeSet, SubscriberFlags, IPropertySubscriber, IPropertyChangeNotifier, SetterObserver, ObjectLiteral, PropertyAccessor, BindingType } from '../../../src/index';
 import { DI } from '../../../../kernel/src/index';
 import { createScopeForTest } from './shared';
 import { expect } from 'chai';
 import { _, massSpy, massReset, massRestore, ensureNotCalled, eachCartesianJoinFactory, verifyEqual } from '../util';
 import sinon from 'sinon';
+import { parse, ParserState, Access, Precedence, parseCore } from '../../../../jit/src';
 
 /**
  * pad a string with spaces on the right-hand side until it's the specified length
@@ -27,7 +29,7 @@ describe('Binding', () => {
   let dummyTargetProperty: string;
   let dummyMode: BindingMode;
 
-  function setup(sourceExpression: IExpression = dummySourceExpression, target: any = dummyTarget, targetProperty: string = dummyTargetProperty, mode: BindingMode = dummyMode) {
+  function setup(sourceExpression: any = dummySourceExpression, target: any = dummyTarget, targetProperty: string = dummyTargetProperty, mode: BindingMode = dummyMode) {
     const container = DI.createContainer();
     const changeSet = container.get<IChangeSet>(IChangeSet);
     const observerLocator = container.get<IObserverLocator>(IObserverLocator);
@@ -66,6 +68,44 @@ describe('Binding', () => {
 
   });
 
+  it(`$bind() [to-view] works with 200 observers`, () => {
+    const count = 200;
+    let rawExpr = '';
+    const ctx = {};
+    const args = Array(count);
+    for (let i = 0; i < count; ++i) {
+      const prop = args[i] = `$${i}`;
+      ctx[prop] = 1;
+    }
+    rawExpr += args.join('+');
+    const expr = parseCore(rawExpr, 0);
+    const container = DI.createContainer();
+    const observerLocator = container.get<IObserverLocator>(IObserverLocator);
+    const target = {val: 0};
+    const sut = new Binding(<any>expr, target, 'val', BindingMode.toView, observerLocator, container);
+    const scope = Scope.create(ctx, null);
+
+    sut.$bind(BindingFlags.fromBind, scope);
+
+    expect(target.val).to.equal(count);
+
+    for (let i = 0; i < count; ++i) {
+      ctx[args[i]] = 2;
+    }
+
+    expect(target.val).to.equal(count * 2);
+
+    const ctx2 = {};
+    for (let i = 0; i < count; ++i) {
+      ctx2[args[i]] = 3;
+    }
+    const scope2 = Scope.create(ctx2, null);
+
+    sut.$bind(BindingFlags.fromBind, scope2);
+
+    expect(target.val).to.equal(count * 3);
+  }).timeout(20000);
+
   describe('$bind() [one-time] assigns the target value', () => {
     eachCartesianJoinFactory(
       [
@@ -103,14 +143,12 @@ describe('Binding', () => {
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.oneTime);
           const srcVal = expr.evaluate(BindingFlags.none, scope, container);
           const targetObserver = observerLocator.getAccessor(target, prop);
-          const expectedTargVal = srcVal !== undefined ? srcVal : targetObserver['defaultValue'];
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
           stub.withArgs(target, prop);
 
-          massSpy(targetObserver, 'setValue', 'setValueCore', 'getValue');
+          massSpy(targetObserver, 'setValue', 'getValue');
           massSpy(expr, 'evaluate');
 
-          ensureNotCalled(targetObserver, 'addSubscriber', 'removeSubscriber', 'callSubscribers');
           ensureNotCalled(sut, 'handleChange');
           ensureNotCalled(expr, 'assign', 'connect');
 
@@ -128,20 +166,7 @@ describe('Binding', () => {
 
           expect(targetObserver.setValue).to.have.been.calledOnce;
           expect(targetObserver.setValue).to.have.been.calledWithExactly(srcVal, flags);
-
-          // verify the behavior of the targetObserver (redundant)
-          if (flags & BindingFlags.fromFlushChanges) {
-            expect(targetObserver['setValueCore']).to.have.been.calledOnce;
-            expect(targetObserver['setValueCore']).to.have.been.calledWithExactly(expectedTargVal, flags);
-
-            expect(changeSet.size).to.equal(0);
-          } else {
-            expect(targetObserver['setValueCore']).not.to.have.been.called;
-
-            changeSet.flushChanges();
-            expect(targetObserver['setValueCore']).to.have.been.calledOnce;
-            expect(targetObserver['setValueCore']).to.have.been.calledWithExactly(expectedTargVal, flags | BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges);
-          }
+          expect(changeSet.size).to.equal(0);
         });
       }
     )
@@ -184,19 +209,15 @@ describe('Binding', () => {
           // - Arrange - Part 1
           const { sut, changeSet, container, observerLocator } = setup(expr, target, prop, BindingMode.toView);
           const srcVal = expr.evaluate(BindingFlags.none, scope, container);
-          const targVal = target[prop];
           const targetObserver = observerLocator.getAccessor(target, prop);
-          const expectedTargVal = srcVal !== undefined ? srcVal : targetObserver['defaultValue'];
-          const hasChanges = !((srcVal === undefined || srcVal === null) && targVal === targetObserver['defaultValue']);
 
           const stub = sinon.stub(observerLocator, 'getAccessor').returns(targetObserver);
           stub.withArgs(target, prop);
 
-          massSpy(targetObserver, 'setValue', 'setValueCore', 'getValue');
+          massSpy(targetObserver, 'setValue', 'getValue');
           massSpy(expr, 'evaluate', 'connect');
           massSpy(sut, 'addObserver', 'observeProperty');
 
-          ensureNotCalled(targetObserver, 'addSubscriber', 'removeSubscriber');
           ensureNotCalled(sut, 'handleChange');
 
           // - Act - Part 1
@@ -228,6 +249,7 @@ describe('Binding', () => {
 
           expect(targetObserver.setValue).to.have.been.calledOnce;
           expect(targetObserver.setValue).to.have.been.calledWithExactly(srcVal, flags);
+          expect(changeSet.size).to.equal(0);
 
           // verify the behavior of the sourceExpression (redundant)
           if (expr instanceof AccessMember) {
@@ -246,34 +268,10 @@ describe('Binding', () => {
             expect(sut.observeProperty).not.to.have.been.called;
           }
 
-          // verify the behavior of the targetObserver (redundant)
-          if (flags & BindingFlags.fromFlushChanges) {
-            if (hasChanges) {
-              expect(targetObserver['setValueCore']).to.have.been.calledOnce;
-              expect(targetObserver['setValueCore']).to.have.been.calledWithExactly(expectedTargVal, flags);
-            } else {
-              expect(targetObserver['setValueCore']).not.to.have.been.called;
-            }
-
-            expect(changeSet.size).to.equal(0);
+          if (srcVal instanceof Object) {
+            expect(target[prop]).to.deep.equal(srcVal);
           } else {
-            expect(targetObserver['setValueCore']).not.to.have.been.called;
-
-            changeSet.flushChanges();
-            if (hasChanges) {
-              expect(targetObserver['setValueCore']).to.have.been.calledOnce;
-              expect(targetObserver['setValueCore']).to.have.been.calledWithExactly(expectedTargVal, flags | BindingFlags.updateTargetInstance | BindingFlags.fromFlushChanges);
-            } else {
-              expect(targetObserver['setValueCore']).not.to.have.been.called;
-            }
-          }
-
-          if (expectedTargVal instanceof Object) {
-            expect(targetObserver.currentValue).to.deep.equal(expectedTargVal);
-            expect(target[prop]).to.deep.equal(expectedTargVal);
-          } else {
-            expect(targetObserver.currentValue).to.equal(expectedTargVal);
-            expect(target[prop]).to.equal(expectedTargVal);
+            expect(target[prop]).to.equal(srcVal);
           }
 
           // - Arrange - Part 2
@@ -289,10 +287,10 @@ describe('Binding', () => {
               massSpy(observer01, 'setValue', 'getValue');
             }
             massSpy(sut, 'handleChange', 'addObserver', 'observeProperty', 'unobserve');
-            massSpy(targetObserver, 'setValue', 'setValueCore', 'getValue');
+            massSpy(targetObserver, 'setValue', 'getValue');
             massSpy(expr, 'evaluate', 'connect');
           } else {
-            ensureNotCalled(targetObserver, 'setValue', 'getValue', 'addSubscriber', 'removeSubscriber');
+            ensureNotCalled(targetObserver, 'setValue', 'getValue');
             ensureNotCalled(sut, 'handleChange');
             ensureNotCalled(expr, 'evaluate', 'connect');
           }
@@ -372,10 +370,8 @@ describe('Binding', () => {
             }
 
             // verify the behavior of the targetObserver (redundant)
-            expect(targetObserver.currentValue).to.equal(newValue);
-            expect(target[prop]).not.to.equal(newValue);
-            changeSet.flushChanges();
             expect(target[prop]).to.equal(newValue);
+            expect(changeSet.size).to.equal(0);
           }
         });
       }
@@ -784,60 +780,12 @@ describe('Binding', () => {
       sut['targetObserver'] = <any>{};
       const unobserveSpy = spy(sut, 'unobserve');
       const unbindSpy = dummySourceExpression.unbind = spy();
+      (<any>dummySourceExpression).$kind |= ExpressionKind.HasUnbind;
       sut.$unbind(BindingFlags.fromUnbind);
       expect(sut['$scope']).to.be.null;
       expect(sut['$isBound']).to.be.false;
       expect(unobserveSpy).to.have.been.calledWith(true);
       expect(unbindSpy).to.have.been.calledWith(BindingFlags.fromUnbind, scope, sut);
-    });
-  });
-
-  describe('connect()', () => {
-    it(`does not connect if it is not bound`, () => {
-      const sourceExpression = new MockExpression();
-      const targetObserver = new MockObserver();
-      const { sut } = setup(<any>sourceExpression);
-      sut['targetObserver'] = targetObserver;
-
-      sut.connect(BindingFlags.mustEvaluate);
-
-      expect(sourceExpression.connect).not.to.have.been.called;
-      expect(sourceExpression.evaluate).not.to.have.been.called;
-      expect(targetObserver.setValue).not.to.have.been.called;
-    });
-
-    it(`connects the sourceExpression`, () => {
-      const sourceExpression = new MockExpression();
-      const targetObserver = new MockObserver();
-      const { sut } = setup(<any>sourceExpression);
-      sut['targetObserver'] = targetObserver;
-      const scope: any = {};
-      sut['$scope'] = scope;
-      sut['$isBound'] = true;
-      const flags = BindingFlags.none;
-
-      sut.connect(flags);
-
-      expect(sourceExpression.connect).to.have.been.calledWith(flags, scope, sut);
-      expect(sourceExpression.evaluate).not.to.have.been.called;
-      expect(targetObserver.setValue).not.to.have.been.called;
-    });
-
-    it(`evaluates the sourceExpression and updates the target with the retrieved value if mustEvaluate is on`, () => {
-      const value: any = {};
-      const sourceExpression = new MockExpression(value);
-      const targetObserver = new MockObserver();
-      const { sut, container } = setup(<any>sourceExpression);
-      sut['targetObserver'] = targetObserver;
-      const scope: any = {};
-      sut['$scope'] = scope;
-      sut['$isBound'] = true;
-
-      sut.connect(BindingFlags.mustEvaluate);
-
-      expect(sourceExpression.connect).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, sut);
-      expect(sourceExpression.evaluate).to.have.been.calledWith(BindingFlags.mustEvaluate, scope, container);
-      expect(targetObserver.setValue).to.have.been.calledWith(value);
     });
   });
 
@@ -974,18 +922,4 @@ class MockObserver implements IBindingTargetObserver {
   setValue = spy();
   subscribe = spy();
   unsubscribe = spy();
-}
-
-class MockExpression implements IExpression {
-  public $kind = ExpressionKind.AccessScope;
-  constructor(public value?: any) {
-    this.evaluate = spy(this, 'evaluate');
-  }
-  evaluate() {
-    return this.value;
-  }
-  connect = spy();
-  assign = spy();
-  bind = spy();
-  unbind = spy();
 }
