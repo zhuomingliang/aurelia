@@ -23,6 +23,7 @@ import { PropertyAccessor } from './property-accessor';
 import { ProxyObserver } from './proxy-observer';
 import { getSetObserver } from './set-observer';
 import { SetterObserver } from './setter-observer';
+import { getPropertyDescriptor } from './observation-utilities';
 
 const toStringTag = Object.prototype.toString;
 
@@ -54,17 +55,6 @@ export interface ITargetAccessorLocator {
 }
 export const ITargetAccessorLocator = DI.createInterface<ITargetAccessorLocator>('ITargetAccessorLocator').noDefault();
 
-function getPropertyDescriptor(subject: object, name: string): PropertyDescriptor {
-  let pd = Object.getOwnPropertyDescriptor(subject, name);
-  let proto = Object.getPrototypeOf(subject);
-
-  while (pd === undefined && proto !== null) {
-    pd = Object.getOwnPropertyDescriptor(proto, name);
-    proto = Object.getPrototypeOf(proto);
-  }
-
-  return pd;
-}
 
 /** @internal */
 export class ObserverLocator implements IObserverLocator {
@@ -196,22 +186,23 @@ export class ObserverLocator implements IObserverLocator {
     }
 
     const tag = toStringTag.call(obj);
+    const dirtyChecker = this.dirtyChecker;
     switch (tag) {
       case '[object Array]':
         if (propertyName === 'length') {
           return this.getArrayObserver(flags, obj as IObservedArray).getLengthObserver(flags);
         }
-        return this.dirtyChecker.createProperty(obj, propertyName);
+        return dirtyChecker.createProperty(obj, propertyName);
       case '[object Map]':
         if (propertyName === 'size') {
           return this.getMapObserver(flags, obj as IObservedMap).getLengthObserver(flags);
         }
-        return this.dirtyChecker.createProperty(obj, propertyName);
+        return dirtyChecker.createProperty(obj, propertyName);
       case '[object Set]':
         if (propertyName === 'size') {
           return this.getSetObserver(flags, obj as IObservedSet).getLengthObserver(flags);
         }
-        return this.dirtyChecker.createProperty(obj, propertyName);
+        return dirtyChecker.createProperty(obj, propertyName);
     }
 
     const descriptor = getPropertyDescriptor(obj, propertyName) as PropertyDescriptor & {
@@ -230,10 +221,10 @@ export class ObserverLocator implements IObserverLocator {
       }
       if (isNode) {
         // TODO: use MutationObserver
-        return this.dirtyChecker.createProperty(obj, propertyName);
+        return dirtyChecker.createProperty(obj, propertyName);
       }
 
-      return createComputedObserver(flags, this, this.dirtyChecker, this.lifecycle, obj, propertyName, descriptor);
+      return createComputedObserver(flags, this, dirtyChecker, this.lifecycle, obj, propertyName, descriptor);
     }
     return new SetterObserver(flags, obj, propertyName);
   }

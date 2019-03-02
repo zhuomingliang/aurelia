@@ -8,13 +8,15 @@ import {
   LifecycleFlags,
   PropertyAccessor,
   SelfObserver,
-  SetterObserver
+  SetterObserver,
+  IDirtyChecker
 } from '@aurelia/runtime';
 import { ElementPropertyAccessor } from '@aurelia/runtime-html';
 import { expect } from 'chai';
 import { HTMLTestContext, TestContext } from '../util';
 import { TestConfiguration } from './resources';
 import { setupAndStart, tearDown } from './util';
+import { IRegistry } from '@aurelia/kernel';
 
 // TemplateCompiler - custom element integration
 describe('custom-elements', function () {
@@ -278,5 +280,66 @@ describe('custom-elements', function () {
     lifecycle.processFlushQueue(LifecycleFlags.none);
     expect(host.textContent).to.equal('w00t00t'.repeat(6));
     tearDown(au, lifecycle, host);
+  });
+
+  // with bindable overlaying plain setter/getter
+  describe('.06', function() {
+    let setterCount = 0;
+    let getterCount = 0;
+
+    beforeEach(() => {
+      setterCount = getterCount = 0;
+    });
+    
+    it.only('.06.1', async function() {
+      ctx.container.register(
+        TestConfiguration,
+        PriceTag
+      );
+      const dirtyChecker = ctx.container.get(IDirtyChecker);
+      const { au, lifecycle, host } = setupAndStart(ctx, `<price-tag price="5" unit="$">`, null);
+      expect(getterCount, 'price.getterCount').to.equal(4);
+      expect(host.textContent, 'host.textContent').to.equal('5');
+      expect(dirtyChecker['tracked'].length, 'hasDirtyChecking?').to.equal(0);
+      const priceTagEl = host.querySelector('price-tag');
+      const priceTagVm: any = CustomElementResource.behaviorFor(priceTagEl);
+      expect(priceTagEl.textContent, '<price-tag>.textContent').to.equal('5');
+      expect(priceTagVm, 'PriceTag--instance').not.to.equal(undefined);
+      expect(setterCount, 'setterCount 2').to.equal(1);
+      expect(getterCount, 'getterCount 2').to.equal(4);
+      expect(Object.getOwnPropertyDescriptor(priceTagVm, 'price').get, '[[getter]]-price').not.to.equal(SelfObserver.prototype.getValue);
+      expect(priceTagVm._price, 'price getter backing store').to.equal(5);
+      expect(priceTagVm.price, 'price getter').to.equal(5);
+      priceTagVm._price = 4;
+      expect(host.textContent).to.equal('5');
+      priceTagVm.price = 4;
+      await Promise.resolve();
+      expect(host.textContent).to.equal('4');
+      expect(getterCount).to.equal(7);
+      expect(setterCount).to.equal(2);
+
+      tearDown(au, lifecycle, host);
+    });
+
+    @customElement({
+      name: 'price-tag',
+      template: '${price}',
+    })
+    class PriceTag {
+
+      public static readonly register: IRegistry['register'];
+      public static bindables = ['price'];
+
+      private _price: number;
+      public get price() {
+        getterCount++;
+        return this._price;
+      }
+
+      public set price(val: unknown) {
+        setterCount++;
+        this._price = Number(val);
+      }
+    }
   });
 });
