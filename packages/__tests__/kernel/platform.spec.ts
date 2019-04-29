@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { PLATFORM } from '@aurelia/kernel';
+import { PLATFORM, kebabCase, camelCase, toArray } from '@aurelia/kernel';
 import { _ } from '@aurelia/testing';
 
 // tslint:disable:no-typeof-undefined
@@ -83,9 +83,9 @@ describe(`The PLATFORM object`, function () {
               if (prepend) input = actualSep + input;
               if (append) input += actualSep;
               it(`${input} -> ${expected}`, function () {
-                const actual = PLATFORM.camelCase(input);
+                const actual = camelCase(input);
                 expect(actual).to.equal(expected);
-                expect(PLATFORM.camelCase(input)).to.equal(actual); // verify via code coverage report that cache is being hit
+                expect(camelCase(input)).to.equal(actual); // verify via code coverage report that cache is being hit
               });
             }
           }
@@ -103,9 +103,9 @@ describe(`The PLATFORM object`, function () {
       ['fOObARbAZ', 'f-o-ob-a-rb-a-z']
     ]) {
       it(`${input} -> ${expected}`, function () {
-        const actual = PLATFORM.kebabCase(input);
+        const actual = kebabCase(input);
         expect(actual).to.equal(expected);
-        expect(PLATFORM.kebabCase(input)).to.equal(actual); // verify via code coverage report that cache is being hit
+        expect(kebabCase(input)).to.equal(actual); // verify via code coverage report that cache is being hit
       });
     }
   });
@@ -117,7 +117,7 @@ describe(`The PLATFORM object`, function () {
     ] as ArrayLike<any>[]) {
       it(_`converts ${input} to array`, function () {
         const expected = Array.from(input);
-        const actual = PLATFORM.toArray(input);
+        const actual = toArray(input);
         expect(typeof expected).to.equal(typeof actual);
         expect(toString.call(expected)).to.equal(toString.call(actual));
         expect(expected instanceof Array).to.equal(actual instanceof Array);

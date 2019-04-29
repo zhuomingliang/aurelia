@@ -2,21 +2,21 @@ export {
   assert,
 } from './assert';
 
-// export {
-//   AuNode,
-//   AuDOM,
-//   AuDOMConfiguration,
-//   AuDOMInitializer,
-//   AuDOMTest,
-//   AuNodeSequence,
-//   AuNodeSequenceFactory,
-//   AuObserverLocator,
-//   AuProjector,
-//   AuProjectorLocator,
-//   AuTemplateFactory,
-//   AuTextInstruction,
-//   AuTextRenderer,
-// } from './au-dom';
+export {
+  AuNode,
+  AuDOM,
+  AuDOMConfiguration,
+  AuDOMInitializer,
+  AuDOMTest,
+  AuNodeSequence,
+  AuNodeSequenceFactory,
+  AuObserverLocator,
+  AuProjector,
+  AuProjectorLocator,
+  AuTemplateFactory,
+  AuTextInstruction,
+  AuTextRenderer,
+} from './au-dom';
 export {
   initializeChaiExtensions,
 } from './chai-extensions';

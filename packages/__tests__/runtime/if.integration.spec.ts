@@ -9,7 +9,6 @@ import {
   BindingContext,
   BindingMode,
   BindingStrategy,
-  CompositionCoordinator,
   Else,
   IDOM,
   If,
@@ -20,7 +19,9 @@ import {
   LifecycleFlags,
   ProxyObserver,
   Scope,
-  ViewFactory
+  ViewFactory,
+  Controller,
+  IController
 } from '@aurelia/runtime';
 import {
   AuDOM,
@@ -30,26 +31,26 @@ import {
   eachCartesianJoin,
 } from '@aurelia/testing';
 
-describe(`If/Else`, function () {
+describe.only(`If/Else`, function () {
   function runBindLifecycle(lifecycle: ILifecycle, sut: If<AuNode>, flags: LifecycleFlags, scope: IScope): void {
-    lifecycle.beginBind();
-    sut.$bind(flags, scope);
-    lifecycle.endBind(flags);
+    lifecycle.bound.begin();
+    sut.$controller.bind(flags, scope);
+    lifecycle.bound.end(flags);
   }
   function runUnbindLifecycle(lifecycle: ILifecycle, sut: If<AuNode>, flags: LifecycleFlags): void {
-    lifecycle.beginUnbind();
-    sut.$unbind(flags);
-    lifecycle.endUnbind(flags);
+    lifecycle.unbound.begin();
+    sut.$controller.unbind(flags);
+    lifecycle.unbound.end(flags);
   }
   function runAttachLifecycle(lifecycle: ILifecycle, sut: If<AuNode>, flags: LifecycleFlags): void {
-    lifecycle.beginAttach();
-    sut.$attach(flags);
-    lifecycle.endAttach(flags);
+    lifecycle.attached.begin();
+    sut.$controller.attach(flags);
+    lifecycle.attached.end(flags);
   }
   function runDetachLifecycle(lifecycle: ILifecycle, sut: If<AuNode>, flags: LifecycleFlags): void {
-    lifecycle.beginDetach();
-    sut.$detach(flags);
-    lifecycle.endDetach(flags);
+    lifecycle.detached.begin();
+    sut.$controller.detach(flags);
+    lifecycle.detached.end(flags);
   }
 
   interface Spec {
@@ -77,10 +78,7 @@ describe(`If/Else`, function () {
   }
   interface MutationSpec extends Spec {
     newValue1: any;
-    flush1: boolean;
-
     newValue2: any;
-    flush2: boolean;
   }
   interface FlagsSpec extends Spec {
     bindFlags1: LifecycleFlags;
@@ -134,22 +132,10 @@ describe(`If/Else`, function () {
   const stopUnbind = stop | unbind;
 
   const mutationSpecs: MutationSpec[] = [
-    { t: '01', newValue1: false, flush1: false, newValue2: false, flush2: false },
-    { t: '02', newValue1: false, flush1: false, newValue2: false, flush2: true  },
-    { t: '03', newValue1: false, flush1: false, newValue2: true,  flush2: false },
-    { t: '04', newValue1: false, flush1: false, newValue2: true,  flush2: true  },
-    { t: '05', newValue1: false, flush1: true,  newValue2: false, flush2: false },
-    { t: '06', newValue1: false, flush1: true,  newValue2: false, flush2: true  },
-    { t: '07', newValue1: false, flush1: true,  newValue2: true,  flush2: false },
-    { t: '08', newValue1: false, flush1: true,  newValue2: true,  flush2: true  },
-    { t: '09', newValue1: true,  flush1: false, newValue2: false, flush2: false },
-    { t: '10', newValue1: true,  flush1: false, newValue2: false, flush2: true  },
-    { t: '11', newValue1: true,  flush1: false, newValue2: true,  flush2: false },
-    { t: '12', newValue1: true,  flush1: false, newValue2: true,  flush2: true  },
-    { t: '13', newValue1: true,  flush1: true,  newValue2: false, flush2: false },
-    { t: '14', newValue1: true,  flush1: true,  newValue2: false, flush2: true  },
-    { t: '15', newValue1: true,  flush1: true,  newValue2: true,  flush2: false },
-    { t: '16', newValue1: true,  flush1: true,  newValue2: true,  flush2: true  },
+    { t: '01', newValue1: false, newValue2: false, },
+    { t: '02', newValue1: false, newValue2: true,  },
+    { t: '03', newValue1: true,  newValue2: false, },
+    { t: '04', newValue1: true,  newValue2: true,  },
   ];
 
   const flagsSpecs: FlagsSpec[] = [
@@ -167,7 +153,7 @@ describe(`If/Else`, function () {
       const { strategy } = strategySpec;
       const { bindTwice, attachTwice, detachTwice, unbindTwice, newScopeForDuplicateBind, newValueForDuplicateBind } = duplicateOperationSpec;
       const { ifPropName, elsePropName, ifText, elseText, value1, value2 } = bindSpec;
-      const { newValue1, flush1, newValue2, flush2 } = mutationSpec;
+      const { newValue1, newValue2 } = mutationSpec;
       const { bindFlags1, attachFlags1, detachFlags1, unbindFlags1, bindFlags2, attachFlags2, detachFlags2, unbindFlags2 } = flagsSpec;
 
       // common stuff
@@ -185,7 +171,7 @@ describe(`If/Else`, function () {
       const ifTemplate: ITemplate<AuNode> = {
         renderContext: null as any,
         dom: null as any,
-        render(renderable) {
+        render(controller: IController<AuNode>) {
           const text = AuNode.createText();
           const wrapper = AuNode.createTemplate().appendChild(text);
 
@@ -193,15 +179,15 @@ describe(`If/Else`, function () {
           const binding = new Binding(new AccessScope(ifPropName), text, 'textContent', BindingMode.toView, observerLocator, container);
           binding.persistentFlags |= baseFlags;
 
-          (renderable as Writable<typeof renderable>).$nodes = nodes;
-          addBinding(renderable, binding);
+          (controller as Writable<typeof controller>).nodes = nodes;
+          addBinding(controller, binding);
         }
       };
 
       const elseTemplate: ITemplate<AuNode> = {
         renderContext: null as any,
         dom: null as any,
-        render(renderable) {
+        render(controller: IController<AuNode>) {
           const text = AuNode.createText();
           const wrapper = AuNode.createTemplate().appendChild(text);
 
@@ -209,8 +195,8 @@ describe(`If/Else`, function () {
           const binding = new Binding(new AccessScope(elsePropName), text, 'textContent', BindingMode.toView, observerLocator, container);
           binding.persistentFlags |= baseFlags;
 
-          (renderable as Writable<typeof renderable>).$nodes = nodes;
-          addBinding(renderable, binding);
+          (controller as Writable<typeof controller>).nodes = nodes;
+          addBinding(controller, binding);
         }
       };
 
@@ -219,14 +205,14 @@ describe(`If/Else`, function () {
       let sut: If<AuNode>;
       let elseSut: Else<AuNode>;
       if (proxies) {
-        sut = ProxyObserver.getOrCreate(new If<AuNode>(ifFactory, location, new CompositionCoordinator(lifecycle))).proxy;
+        sut = ProxyObserver.getOrCreate(new If<AuNode>(ifFactory, location)).proxy;
         elseSut = ProxyObserver.getOrCreate(new Else<AuNode>(elseFactory)).proxy;
       } else {
-        sut = new If<AuNode>(ifFactory, location, new CompositionCoordinator(lifecycle));
+        sut = new If<AuNode>(ifFactory, location);
         elseSut = new Else<AuNode>(elseFactory);
       }
       elseSut.link(sut);
-      sut.$hydrate(LifecycleFlags.none, container);
+      sut.$controller = Controller.forCustomAttribute(sut, container);
 
       let firstBindInitialNodesText: string;
       let firstBindFinalNodesText: string;
@@ -249,11 +235,7 @@ describe(`If/Else`, function () {
         firstBindFinalNodesText = firstBindInitialNodesText;
         firstAttachInitialHostText = value1 ? ifText : elseText;
       }
-      if (flush1) {
-        firstAttachFinalHostText = newValue1 ? ifText : elseText;
-      } else {
-        firstAttachFinalHostText = firstAttachInitialHostText;
-      }
+      firstAttachFinalHostText = newValue1 ? ifText : elseText;
 
       secondBindInitialNodesText = value2 ? ifText : elseText;
       if (bindTwice) {
@@ -267,11 +249,7 @@ describe(`If/Else`, function () {
         secondBindFinalNodesText = secondBindInitialNodesText;
         secondAttachInitialHostText = value2 ? ifText : elseText;
       }
-      if (flush2) {
-        secondAttachFinalHostText = newValue2 ? ifText : elseText;
-      } else {
-        secondAttachFinalHostText = secondAttachInitialHostText;
-      }
+      secondAttachFinalHostText = newValue2 ? ifText : elseText;
 
       // -- Round 1 --
 
@@ -285,7 +263,7 @@ describe(`If/Else`, function () {
 
       runBindLifecycle(lifecycle, sut, baseFlags | bindFlags1, scope);
 
-      expect(sut.coordinator['currentView'].$nodes.firstChild['textContent']).to.equal(firstBindInitialNodesText, '$nodes.textContent #1');
+      expect(sut.view.nodes.firstChild['textContent']).to.equal(firstBindInitialNodesText, '$nodes.textContent #1');
 
       // after binding the nodes should be present and already updated with the correct values
       if (bindTwice) {
@@ -296,7 +274,7 @@ describe(`If/Else`, function () {
 
         runBindLifecycle(lifecycle, sut, baseFlags | bindFlags1, scope);
       }
-      expect(sut.coordinator['currentView'].$nodes.firstChild['textContent']).to.equal(firstBindFinalNodesText, '$nodes.textContent #2');
+      expect(sut.view.nodes.firstChild['textContent']).to.equal(firstBindFinalNodesText, '$nodes.textContent #2');
 
       runAttachLifecycle(lifecycle, sut, baseFlags | attachFlags1);
 
@@ -311,10 +289,10 @@ describe(`If/Else`, function () {
       // swapping is batched so shouldn't update yet
 
 
-      if (flush1) {
-        lifecycle.processFlushQueue(baseFlags);
-        // flushing always forces pending swaps
-      }
+      // if (flush1) {
+      //   lifecycle.processFlushQueue(baseFlags);
+      //   // flushing always forces pending swaps
+      // }
       expect(host.textContent).to.equal(firstAttachFinalHostText, 'host.textContent #2');
 
       runDetachLifecycle(lifecycle, sut, baseFlags | detachFlags1);
@@ -338,7 +316,7 @@ describe(`If/Else`, function () {
 
       runBindLifecycle(lifecycle, sut, baseFlags | bindFlags2, scope);
 
-      expect(sut.coordinator['currentView'].$nodes.firstChild['textContent']).to.equal(secondBindInitialNodesText, '$nodes.textContent #3');
+      expect(sut.view.nodes.firstChild['textContent']).to.equal(secondBindInitialNodesText, '$nodes.textContent #3');
       if (bindTwice) {
         if (newScopeForDuplicateBind) {
           scope = Scope.create(baseFlags, ctx);
@@ -347,7 +325,7 @@ describe(`If/Else`, function () {
         runBindLifecycle(lifecycle, sut, baseFlags | bindFlags2, scope);
       }
 
-      expect(sut.coordinator['currentView'].$nodes.firstChild['textContent']).to.equal(secondBindFinalNodesText, '$nodes.textContent #4');
+      expect(sut.view.nodes.firstChild['textContent']).to.equal(secondBindFinalNodesText, '$nodes.textContent #4');
 
       runAttachLifecycle(lifecycle, sut, baseFlags | attachFlags2);
 
@@ -361,9 +339,9 @@ describe(`If/Else`, function () {
       sut.value = newValue2;
 
 
-      if (flush2) {
-        lifecycle.processFlushQueue(baseFlags);
-      }
+      // if (flush2) {
+      //   lifecycle.processFlushQueue(baseFlags);
+      // }
       expect(host.textContent).to.equal(secondAttachFinalHostText, 'host.textContent #5');
 
       runDetachLifecycle(lifecycle, sut, baseFlags | detachFlags2);

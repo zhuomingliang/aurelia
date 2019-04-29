@@ -1,7 +1,7 @@
 // tslint:disable:quotemark member-access no-all-duplicated-branches
 import { Profiler } from "@aurelia/kernel";
 import { Aurelia, CustomElementResource } from "@aurelia/runtime";
-import { TestContext, writeProfilerReport, assert } from "@aurelia/testing";
+import { TestContext, writeProfilerReport, assert, h } from "@aurelia/testing";
 
 describe("generated.template-compiler.static", function () {
     before(function () {
@@ -36,7 +36,7 @@ describe("generated.template-compiler.static", function () {
     }
     it("tag$01 text$01 _", function () {
         const { au, host } = setup();
-        const App = CustomElementResource.define({ name: "app", template: "<template><div>a</div></template>" }, class {
+        const App = CustomElementResource.define({ name: "app", template: h('template', void 0, h('div', void 0, 'a')) }, class {
         });
         const component = new App();
         au.app({ host, component });

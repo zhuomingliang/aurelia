@@ -34,5 +34,5 @@ function initializeBrowserTestContext(): void {
 initializeBrowserTestContext();
 initializeChaiExtensions();
 
-const testContext = require.context('.', true, /\.spec/);
+const testContext = require.context('.', true, /if\.integration\.spec/);
 testContext.keys().forEach(testContext);

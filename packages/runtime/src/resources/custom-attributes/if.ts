@@ -82,7 +82,7 @@ export class If<T extends INode = INode> {
 
   private task: ILifecycleTask;
   // tslint:disable-next-line: prefer-readonly // This is set by the controller after this instance is constructed
-  private $controller!: IController<T>;
+  public $controller!: IController<T>;
 
   private _value: boolean;
 
@@ -215,7 +215,7 @@ export class If<T extends INode = INode> {
     let task: ILifecycleTask = LifecycleTask.done;
     if (
       (value === true && this.elseView !== void 0)
-      || (value !== true && this.ifView === void 0)
+      || (value !== true && this.ifView !== void 0)
     ) {
       task = this.deactivate(flags);
     }
