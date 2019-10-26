@@ -1,0 +1,82 @@
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./ast", "./attribute-parser", "./attribute-pattern", "./attribute-patterns", "./binding-command", "./binding-commands", "./configuration", "./common", "./expression-parser", "./resource-model", "./semantic-model"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var ast_1 = require("./ast");
+    exports.AttrSyntax = ast_1.AttrSyntax;
+    var attribute_parser_1 = require("./attribute-parser");
+    exports.IAttributeParser = attribute_parser_1.IAttributeParser;
+    var attribute_pattern_1 = require("./attribute-pattern");
+    exports.attributePattern = attribute_pattern_1.attributePattern;
+    exports.IAttributePattern = attribute_pattern_1.IAttributePattern;
+    exports.Interpretation = attribute_pattern_1.Interpretation;
+    exports.ISyntaxInterpreter = attribute_pattern_1.ISyntaxInterpreter;
+    var attribute_patterns_1 = require("./attribute-patterns");
+    exports.AtPrefixedTriggerAttributePattern = attribute_patterns_1.AtPrefixedTriggerAttributePattern;
+    exports.ColonPrefixedBindAttributePattern = attribute_patterns_1.ColonPrefixedBindAttributePattern;
+    exports.DotSeparatedAttributePattern = attribute_patterns_1.DotSeparatedAttributePattern;
+    exports.RefAttributePattern = attribute_patterns_1.RefAttributePattern;
+    var binding_command_1 = require("./binding-command");
+    exports.bindingCommand = binding_command_1.bindingCommand;
+    exports.BindingCommand = binding_command_1.BindingCommand;
+    exports.BindingCommandDefinition = binding_command_1.BindingCommandDefinition;
+    exports.getTarget = binding_command_1.getTarget;
+    var binding_commands_1 = require("./binding-commands");
+    exports.CallBindingCommand = binding_commands_1.CallBindingCommand;
+    exports.DefaultBindingCommand = binding_commands_1.DefaultBindingCommand;
+    exports.ForBindingCommand = binding_commands_1.ForBindingCommand;
+    exports.FromViewBindingCommand = binding_commands_1.FromViewBindingCommand;
+    exports.OneTimeBindingCommand = binding_commands_1.OneTimeBindingCommand;
+    exports.ToViewBindingCommand = binding_commands_1.ToViewBindingCommand;
+    exports.TwoWayBindingCommand = binding_commands_1.TwoWayBindingCommand;
+    var configuration_1 = require("./configuration");
+    exports.IExpressionParserRegistration = configuration_1.IExpressionParserRegistration;
+    exports.DefaultComponents = configuration_1.DefaultComponents;
+    exports.RefAttributePatternRegistration = configuration_1.RefAttributePatternRegistration;
+    exports.DotSeparatedAttributePatternRegistration = configuration_1.DotSeparatedAttributePatternRegistration;
+    exports.DefaultBindingSyntax = configuration_1.DefaultBindingSyntax;
+    exports.AtPrefixedTriggerAttributePatternRegistration = configuration_1.AtPrefixedTriggerAttributePatternRegistration;
+    exports.ColonPrefixedBindAttributePatternRegistration = configuration_1.ColonPrefixedBindAttributePatternRegistration;
+    exports.ShortHandBindingSyntax = configuration_1.ShortHandBindingSyntax;
+    exports.CallBindingCommandRegistration = configuration_1.CallBindingCommandRegistration;
+    exports.DefaultBindingCommandRegistration = configuration_1.DefaultBindingCommandRegistration;
+    exports.ForBindingCommandRegistration = configuration_1.ForBindingCommandRegistration;
+    exports.FromViewBindingCommandRegistration = configuration_1.FromViewBindingCommandRegistration;
+    exports.OneTimeBindingCommandRegistration = configuration_1.OneTimeBindingCommandRegistration;
+    exports.ToViewBindingCommandRegistration = configuration_1.ToViewBindingCommandRegistration;
+    exports.TwoWayBindingCommandRegistration = configuration_1.TwoWayBindingCommandRegistration;
+    exports.DefaultBindingLanguage = configuration_1.DefaultBindingLanguage;
+    exports.JitConfiguration = configuration_1.JitConfiguration;
+    var common_1 = require("./common");
+    exports.Access = common_1.Access;
+    exports.Precedence = common_1.Precedence;
+    exports.Char = common_1.Char;
+    var expression_parser_1 = require("./expression-parser");
+    exports.parseExpression = expression_parser_1.parseExpression;
+    exports.parse = expression_parser_1.parse;
+    exports.ParserState = expression_parser_1.ParserState;
+    var resource_model_1 = require("./resource-model");
+    exports.ResourceModel = resource_model_1.ResourceModel;
+    exports.BindableInfo = resource_model_1.BindableInfo;
+    exports.ElementInfo = resource_model_1.ElementInfo;
+    exports.AttrInfo = resource_model_1.AttrInfo;
+    var semantic_model_1 = require("./semantic-model");
+    exports.BindingSymbol = semantic_model_1.BindingSymbol;
+    exports.CustomAttributeSymbol = semantic_model_1.CustomAttributeSymbol;
+    exports.CustomElementSymbol = semantic_model_1.CustomElementSymbol;
+    exports.LetElementSymbol = semantic_model_1.LetElementSymbol;
+    exports.PlainAttributeSymbol = semantic_model_1.PlainAttributeSymbol;
+    exports.PlainElementSymbol = semantic_model_1.PlainElementSymbol;
+    exports.ReplacePartSymbol = semantic_model_1.ReplacePartSymbol;
+    exports.SymbolFlags = semantic_model_1.SymbolFlags;
+    exports.TemplateControllerSymbol = semantic_model_1.TemplateControllerSymbol;
+    exports.TextSymbol = semantic_model_1.TextSymbol;
+});
+//# sourceMappingURL=index.js.map

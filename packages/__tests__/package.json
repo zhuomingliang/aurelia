@@ -98,5 +98,7 @@
     "webpack": "^4.41.2",
     "yargs": "^14.2.0"
   },
-  "version": "0.4.0"
+  "version": "0.4.0",
+  "main": "dist/umd/index.js",
+  "module": "dist/esnext/index.js"
 }

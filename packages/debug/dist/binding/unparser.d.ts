@@ -1,0 +1,60 @@
+import * as AST from '@aurelia/runtime';
+export declare function enableImprovedExpressionDebugging(): void;
+export declare class Unparser implements AST.IVisitor<void> {
+    text: string;
+    static unparse(expr: AST.IExpression): string;
+    visitAccessMember(expr: AST.AccessMemberExpression): void;
+    visitAccessKeyed(expr: AST.AccessKeyedExpression): void;
+    visitAccessThis(expr: AST.AccessThisExpression): void;
+    visitAccessScope(expr: AST.AccessScopeExpression): void;
+    visitArrayLiteral(expr: AST.ArrayLiteralExpression): void;
+    visitObjectLiteral(expr: AST.ObjectLiteralExpression): void;
+    visitPrimitiveLiteral(expr: AST.PrimitiveLiteralExpression): void;
+    visitCallFunction(expr: AST.CallFunctionExpression): void;
+    visitCallMember(expr: AST.CallMemberExpression): void;
+    visitCallScope(expr: AST.CallScopeExpression): void;
+    visitTemplate(expr: AST.TemplateExpression): void;
+    visitTaggedTemplate(expr: AST.TaggedTemplateExpression): void;
+    visitUnary(expr: AST.UnaryExpression): void;
+    visitBinary(expr: AST.BinaryExpression): void;
+    visitConditional(expr: AST.ConditionalExpression): void;
+    visitAssign(expr: AST.AssignExpression): void;
+    visitValueConverter(expr: AST.ValueConverterExpression): void;
+    visitBindingBehavior(expr: AST.BindingBehaviorExpression): void;
+    visitArrayBindingPattern(expr: AST.ArrayBindingPattern): void;
+    visitObjectBindingPattern(expr: AST.ObjectBindingPattern): void;
+    visitBindingIdentifier(expr: AST.BindingIdentifier): void;
+    visitHtmlLiteral(expr: AST.HtmlLiteralExpression): void;
+    visitForOfStatement(expr: AST.ForOfStatement): void;
+    visitInterpolation(expr: AST.Interpolation): void;
+    private writeArgs;
+}
+export declare class Serializer implements AST.IVisitor<string> {
+    static serialize(expr: AST.IExpression): string;
+    visitAccessMember(expr: AST.AccessMemberExpression): string;
+    visitAccessKeyed(expr: AST.AccessKeyedExpression): string;
+    visitAccessThis(expr: AST.AccessThisExpression): string;
+    visitAccessScope(expr: AST.AccessScopeExpression): string;
+    visitArrayLiteral(expr: AST.ArrayLiteralExpression): string;
+    visitObjectLiteral(expr: AST.ObjectLiteralExpression): string;
+    visitPrimitiveLiteral(expr: AST.PrimitiveLiteralExpression): string;
+    visitCallFunction(expr: AST.CallFunctionExpression): string;
+    visitCallMember(expr: AST.CallMemberExpression): string;
+    visitCallScope(expr: AST.CallScopeExpression): string;
+    visitTemplate(expr: AST.TemplateExpression): string;
+    visitTaggedTemplate(expr: AST.TaggedTemplateExpression): string;
+    visitUnary(expr: AST.UnaryExpression): string;
+    visitBinary(expr: AST.BinaryExpression): string;
+    visitConditional(expr: AST.ConditionalExpression): string;
+    visitAssign(expr: AST.AssignExpression): string;
+    visitValueConverter(expr: AST.ValueConverterExpression): string;
+    visitBindingBehavior(expr: AST.BindingBehaviorExpression): string;
+    visitArrayBindingPattern(expr: AST.ArrayBindingPattern): string;
+    visitObjectBindingPattern(expr: AST.ObjectBindingPattern): string;
+    visitBindingIdentifier(expr: AST.BindingIdentifier): string;
+    visitHtmlLiteral(expr: AST.HtmlLiteralExpression): string;
+    visitForOfStatement(expr: AST.ForOfStatement): string;
+    visitInterpolation(expr: AST.Interpolation): string;
+    private serializeExpressions;
+}
+//# sourceMappingURL=unparser.d.ts.map

@@ -1,0 +1,44 @@
+import { ForOfStatement } from '../../binding/ast';
+import { INode, IRenderLocation } from '../../dom';
+import { LifecycleFlags as LF } from '../../flags';
+import { IController, IViewFactory } from '../../lifecycle';
+import { ILifecycleTask } from '../../lifecycle-task';
+import { CollectionObserver, IndexMap, IObservedArray, ObservedCollection } from '../../observation';
+declare type Items<C extends ObservedCollection = IObservedArray> = C | undefined;
+export declare class Repeat<C extends ObservedCollection = IObservedArray, T extends INode = INode> {
+    location: IRenderLocation<T>;
+    renderable: IController<T>;
+    factory: IViewFactory<T>;
+    readonly id: number;
+    hasPendingInstanceMutation: boolean;
+    observer?: CollectionObserver;
+    views: IController<T>[];
+    key?: string;
+    forOf: ForOfStatement;
+    local: string;
+    $controller: IController<T>;
+    private task;
+    items: Items<C>;
+    private normalizedItems?;
+    constructor(location: IRenderLocation<T>, renderable: IController<T>, factory: IViewFactory<T>);
+    binding(flags: LF): ILifecycleTask;
+    attaching(flags: LF): void;
+    detaching(flags: LF): void;
+    unbinding(flags: LF): ILifecycleTask;
+    itemsChanged(flags: LF): void;
+    handleCollectionChange(indexMap: IndexMap | undefined, flags: LF): void;
+    private processViewsKeyed;
+    private checkCollectionObserver;
+    private normalizeToArray;
+    private detachViewsByRange;
+    private unbindAndRemoveViewsByRange;
+    private detachViewsByKey;
+    private unbindAndRemoveViewsByKey;
+    private createAndBindAllViews;
+    private createAndBindNewViewsByKey;
+    private attachViews;
+    private attachViewsKeyed;
+    private sortViewsByKey;
+}
+export {};
+//# sourceMappingURL=repeat.d.ts.map
