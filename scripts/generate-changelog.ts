@@ -1,12 +1,9 @@
-import { join } from 'path';
-import project from './project';
-import { writeFileSync, appendFileSync, readFileSync, existsSync } from 'fs';
-import { getCurrentVersion, getNewVersion, getDate } from './bump-version';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { getGitLog } from './git';
-import { createLogger, c } from './logger';
+import { createLogger } from './logger';
+import project from './project';
 
 const log = createLogger('generate-changelog');
-;
 
 function toUrl(hash: string): string {
   return `([${hash}](https://github.com/aurelia/aurelia/commit/${hash}))`;
@@ -26,14 +23,33 @@ interface IChangeLog {
 
 const regex = {
   commit: /^commit ([0-9a-f]{40})$/i,
-  feat: /feat\((.*)\):\s*(.*)$/i,
-  fix: /fix\((.*)\):\s*(.*)$/i,
-  perf: /perf\((.*)\):\s*(.*)$/i,
-  refactor: /refactor\((.*)\):\s*(.*)$/i
+  feat: /feat(.*):\s*(.*)$/i,
+  fix: /fix(.*):\s*(.*)$/i,
+  perf: /perf(.*):\s*(.*)$/i,
+  refactor: /refactor(.*):\s*(.*)$/i
 };
 
-async function getRawChangeLog(from: string, to: string, path: string) {
-  const gitLog = await getGitLog(from, to, path);
+function getCurrentVersion(): {
+  major: string;
+  minor: string;
+  patch: string;
+} {
+  const versionRegExp = /(\d+)\.(\d+)\.(\d+)($|-)/;
+  const match = versionRegExp.exec(project.lerna.version);
+
+  return {
+    major: match[1],
+    minor: match[2],
+    patch: match[3],
+  };
+}
+
+async function getRawChangeLog(
+  fromRevision: string,
+  toRevision: string,
+  pathRef: string,
+): Promise<IChangeLog> {
+  const gitLog = await getGitLog(fromRevision, toRevision, pathRef);
   const lines = gitLog.split('\n');
   const results: IChangeLog = {
     feat: [],
@@ -43,82 +59,94 @@ async function getRawChangeLog(from: string, to: string, path: string) {
   };
   let match: RegExpExecArray;
   let currentHash = '';
-  let type = '';
+  let Type = '';
 
   for (const line of lines) {
     if (match = regex.commit.exec(line)) {
       currentHash = match[1].slice(0, 7);
-      type = null;
+      Type = null;
     } else if (match = regex.feat.exec(line)) {
-      type = 'feat';
+      Type = 'feat';
     } else if (match = regex.fix.exec(line)) {
-      type = 'fix';
+      Type = 'fix';
     } else if (match = regex.perf.exec(line)) {
-      type = 'perf';
+      Type = 'perf';
     } else if (match = regex.refactor.exec(line)) {
-      type = 'refactor';
+      Type = 'refactor';
     } else {
-      type = null;
+      Type = null;
     }
-    if (type !== null) {
+
+    if (Type !== null) {
       const result = {
         hash: currentHash,
-        scope: match[1],
+        scope: match[1].length > 0 ? match[1].slice(1, -1) : '*',
         message: match[2]
       };
-      log.info(`${type}(${result.scope}): ${result.message}`)
-      results[type].push(result);
+      log.info(`${Type}(${result.scope}): ${result.message}`);
+      results[Type].push(result);
     }
   }
+
   return results;
 }
 
-async function getChangeLogContent(from: string, to: string, path: string, pkgName?: string, newVersion?: string) {
-  const changelog = await getRawChangeLog(from, to, path);
+async function getChangeLogContent(
+  fromRevision: string,
+  toRevision: string,
+  pathRef: string,
+  pkgName?: string,
+  newVersion?: string,
+): Promise<{
+    content: string;
+    newVersion: string;
+  }> {
+  const changelog = await getRawChangeLog(fromRevision, toRevision, pathRef);
 
-  if (newVersion === undefined) {
+  if (newVersion === void 0) {
     const { major, minor, patch } = getCurrentVersion();
     if (changelog.feat.length > 0) {
-      newVersion = getNewVersion(major, parseInt(minor, 10) + 1, patch, 'latest');
+      newVersion = `${major}.${parseInt(minor, 10) + 1}.0`;
     } else {
-      newVersion = getNewVersion(major, minor, parseInt(patch, 10) + 1, 'latest');
-    }
-  } else if (pkgName === undefined) {
-    if (pkgName === undefined) {
-      throw new Error('if newVersion is specified, pkgName must be too');
+      newVersion = `${major}.${minor}.${parseInt(patch, 10) + 1}`;
     }
   }
 
-  let content = `<a name="${newVersion}"></a>\n# ${newVersion} (${getDate('-')})`;
+  const datestamp = new Date().toISOString().split('T')[0];
+  let content = `<a name="${newVersion}"></a>\n# ${newVersion} (${datestamp})`;
 
   let hasChanges = false;
-  if (changelog.feat.length) {
+  if (changelog.feat.length > 0) {
     hasChanges = true;
     content += '\n\n### Features:\n\n';
+
     for (const feat of changelog.feat) {
       content += `* **${feat.scope}:** ${feat.message} ${toUrl(feat.hash)}\n`;
     }
   }
 
-  if (changelog.fix.length) {
+  if (changelog.fix.length > 0) {
     hasChanges = true;
     content += '\n\n### Bug Fixes:\n\n';
+
     for (const fix of changelog.fix) {
       content += `* **${fix.scope}:** ${fix.message} ${toUrl(fix.hash)}\n`;
     }
   }
 
-  if (changelog.perf.length) {
+  if (changelog.perf.length > 0) {
     hasChanges = true;
     content += '\n\n### Performance Improvements:\n\n';
+
     for (const perf of changelog.perf) {
       content += `* **${perf.scope}:** ${perf.message} ${toUrl(perf.hash)}\n`;
     }
   }
 
-  if (changelog.refactor.length) {
+  if (changelog.refactor.length > 0) {
     hasChanges = true;
     content += '\n\n### Refactorings:\n\n';
+
     for (const refactor of changelog.refactor) {
       content += `* **${refactor.scope}:** ${refactor.message} ${toUrl(refactor.hash)}\n`;
     }
@@ -128,12 +156,15 @@ async function getChangeLogContent(from: string, to: string, path: string, pkgNa
     content += `\n\n**Note:** Version bump only for package ${pkgName}\n`;
   }
 
-  content += '\n'
+  content += '\n';
 
   return { content, newVersion };
 }
 
-export async function generateChangeLog(from: string, to: string) {
+export async function generateChangeLog(
+  fromRevision: string,
+  toRevision: string,
+): Promise<string> {
   const standardHeader = `# Change Log
 
 All notable changes to this project will be documented in this file.
@@ -141,18 +172,18 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 `;
 
-  const currentAnchor = `<a name="${from.startsWith('v') ? from.slice(1) : from}"></a>`;
+  const currentAnchor = `<a name="${fromRevision.startsWith('v') ? fromRevision.slice(1) : fromRevision}"></a>`;
   const currentChangelog = readFileSync(project.changelog.path, { encoding: 'utf8' });
   const currentParts = currentChangelog.split(currentAnchor);
 
-  const { content: newChangeLog, newVersion } = await getChangeLogContent(from, to, project.path);
+  const { content: newChangeLog, newVersion } = await getChangeLogContent(fromRevision, toRevision, project.path);
   const newContent = standardHeader + newChangeLog + currentAnchor + (currentParts[1] || '');
   writeFileSync(project.changelog.path, newContent, { encoding: 'utf8' });
 
   for (const pkg of project.packages) {
     let existingChangeLog = '';
-    if (existsSync(pkg.changelog.path)) {
-      const currentPkgChangelog = readFileSync(pkg.changelog.path, { encoding: 'utf8' });
+    if (existsSync(pkg.changelog)) {
+      const currentPkgChangelog = readFileSync(pkg.changelog, { encoding: 'utf8' });
       const currentPkgParts = currentPkgChangelog.split(currentAnchor);
       const existingPart = currentPkgParts[1];
       if (existingPart && existingPart.length) {
@@ -160,9 +191,9 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
       }
     }
 
-    const { content: newPkgChangeLog } = await getChangeLogContent(from, to, pkg.path, pkg.scopedName, newVersion);
+    const { content: newPkgChangeLog } = await getChangeLogContent(fromRevision, toRevision, pkg.path, pkg.name.npm, newVersion);
     const newPkgContent = standardHeader + newPkgChangeLog + existingChangeLog;
-    writeFileSync(pkg.changelog.path, newPkgContent, { encoding: 'utf8' });
+    writeFileSync(pkg.changelog, newPkgContent, { encoding: 'utf8' });
   }
 
   return newVersion;

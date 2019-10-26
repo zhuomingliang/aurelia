@@ -1,5 +1,3 @@
-// tslint:disable:mocha-no-side-effect-code
-// tslint:disable:typedef
 import { expect } from 'chai';
 import { browser, loadUrl } from './common/browser';
 import { processMeasurements } from './common/measurements';
@@ -35,7 +33,7 @@ describe(`App page`, () => {
     });
   });
 
-  for (const count of [10, 100, 1000, 10000]) {
+  for (const count of [10000]) {
     describe(`benchmark x${count}`, () => {
 
       it(`add and remove ${count} todos`, async () => {
@@ -69,6 +67,36 @@ describe(`App page`, () => {
         await AppPage.addTodo();
         await AppPage.reverseTodos();
         await AppPage.reverseTodos();
+      });
+
+      it(`add ${count} todos and insert 10 todos spread evenly 5 times`, async () => {
+        await AppPage.setCountInputValue(count);
+        await AppPage.addTodo();
+        await AppPage.insertTodos();
+        await AppPage.insertTodos();
+        await AppPage.insertTodos();
+        await AppPage.insertTodos();
+        await AppPage.insertTodos();
+      });
+
+      it(`add ${count} todos and remove 10 todos spread evenly 5 times`, async () => {
+        await AppPage.setCountInputValue(count);
+        await AppPage.addTodo();
+        await AppPage.removeTodos();
+        await AppPage.removeTodos();
+        await AppPage.removeTodos();
+        await AppPage.removeTodos();
+        await AppPage.removeTodos();
+      });
+
+      it(`add ${count} todos and swap 2 todos 5 times`, async () => {
+        await AppPage.setCountInputValue(count);
+        await AppPage.addTodo();
+        await AppPage.swapTodos();
+        await AppPage.swapTodos();
+        await AppPage.swapTodos();
+        await AppPage.swapTodos();
+        await AppPage.swapTodos();
       });
     });
   }

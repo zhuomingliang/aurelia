@@ -1,7 +1,5 @@
-// tslint:disable:typedef
-// tslint:disable:function-name
 import { By, until } from 'selenium-webdriver';
-import { browser, waitForElement } from '../common/browser';
+import { browser } from '../common/browser';
 import { AppConstants } from './app.constants';
 
 const { cssSelectors } = AppConstants;
@@ -95,6 +93,36 @@ export class AppPage {
     await browser.wait(until.elementLocated(By.css(cssSelectors.reverseTodosButton)), 1000);
     log(`click Reverse todos`);
     await this.reverseTodosButton.click();
+  }
+
+  public static get insertTodosButton() {
+    return browser.findElement(By.css(cssSelectors.insertTodosButton));
+  }
+
+  public static async insertTodos() {
+    await browser.wait(until.elementLocated(By.css(cssSelectors.insertTodosButton)), 1000);
+    log(`click Insert todos`);
+    await this.insertTodosButton.click();
+  }
+
+  public static get removeTodosButton() {
+    return browser.findElement(By.css(cssSelectors.removeTodosButton));
+  }
+
+  public static async removeTodos() {
+    await browser.wait(until.elementLocated(By.css(cssSelectors.removeTodosButton)), 1000);
+    log(`click Remove todos`);
+    await this.removeTodosButton.click();
+  }
+
+  public static get swapTodosButton() {
+    return browser.findElement(By.css(cssSelectors.swapTodosButton));
+  }
+
+  public static async swapTodos() {
+    await browser.wait(until.elementLocated(By.css(cssSelectors.swapTodosButton)), 1000);
+    log(`click Swap todos`);
+    await this.swapTodosButton.click();
   }
 
   public static get descriptionInterpolation() {

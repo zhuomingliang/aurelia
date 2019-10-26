@@ -1,493 +1,357 @@
-import { Immutable, IServiceLocator, PLATFORM } from '@aurelia/kernel';
-import { BindingMode, CustomAttributeResource, CustomElementResource, DOM, IBindableDescription, ICustomAttributeSource, IExpressionParser, IResourceDescriptions, ITemplateSource, TargetedInstruction } from '@aurelia/runtime';
-import { AttrSyntax, BindingCommandResource, Char, ElementSyntax, HydrateTemplateController, IAttributeParser, IBindingCommand, IElementParser, NodeType } from '.';
+import { AnyBindingExpression, IDOM, IInterpolationExpression, INode } from '@aurelia/runtime';
+import { AttrSyntax } from './ast';
+import { BindingCommandInstance } from './binding-command';
+import { AttrInfo, BindableInfo, ElementInfo } from './resource-model';
 
-export class SemanticModel {
-  public readonly isSemanticModel: true = true;
-  public readonly root: ElementSymbol;
+export const enum SymbolFlags {
+  type                 = 0b000000_111111111,
+  isTemplateController = 0b000000_000000001,
+  isReplacePart        = 0b000000_000000010,
+  isCustomAttribute    = 0b000000_000000100,
+  isPlainAttribute     = 0b000000_000001000,
+  isCustomElement      = 0b000000_000010000,
+  isLetElement         = 0b000000_000100000,
+  isPlainElement       = 0b000000_001000000,
+  isText               = 0b000000_010000000,
+  isBinding            = 0b000000_100000000,
+  hasMarker            = 0b000001_000000000,
+  hasTemplate          = 0b000010_000000000,
+  hasAttributes        = 0b000100_000000000,
+  hasBindings          = 0b001000_000000000,
+  hasChildNodes        = 0b010000_000000000,
+  hasParts             = 0b100000_000000000,
+}
 
-  private readonly attrDefCache: Record<string, ICustomAttributeSource>;
-  private readonly elDefCache: Record<string, ITemplateSource>;
-  private readonly commandCache: Record<string, IBindingCommand>;
+function createMarker<N extends INode = INode>(dom: IDOM): N {
+  const marker = dom.createElement('au-m');
+  dom.makeTarget(marker);
+  return marker as N;
+}
 
-  private constructor(
-    definition: ITemplateSource,
-    public resources: IResourceDescriptions,
-    public attrParser: IAttributeParser,
-    public elParser: IElementParser,
-    public exprParser: IExpressionParser
+export type AnySymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomAttributeSymbol |
+  CustomElementSymbol<TText, TElement, TMarker> |
+  LetElementSymbol<TElement, TMarker> |
+  PlainAttributeSymbol |
+  PlainElementSymbol<TText, TElement, TMarker> |
+  ReplacePartSymbol<TText, TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker> |
+  TextSymbol<TText, TMarker>
+);
+
+export type AttributeSymbol = (
+  CustomAttributeSymbol |
+  PlainAttributeSymbol
+);
+
+export type SymbolWithBindings<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomAttributeSymbol |
+  CustomElementSymbol<TText, TElement, TMarker> |
+  LetElementSymbol<TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker>
+);
+
+export type ResourceAttributeSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomAttributeSymbol |
+  TemplateControllerSymbol<TText, TElement, TMarker>
+);
+
+export type NodeSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomElementSymbol<TText, TElement, TMarker> |
+  LetElementSymbol<TElement, TMarker> |
+  PlainElementSymbol<TText, TElement, TMarker> |
+  ReplacePartSymbol<TText, TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker> |
+  TextSymbol<TText, TMarker>
+);
+
+export type ParentNodeSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomElementSymbol<TText, TElement, TMarker> |
+  PlainElementSymbol<TText, TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker>
+);
+
+export type ElementSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomElementSymbol<TText, TElement, TMarker> |
+  PlainElementSymbol<TText, TElement, TMarker>
+);
+
+export type SymbolWithTemplate<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  ReplacePartSymbol<TText, TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker>
+);
+
+export type SymbolWithMarker<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> = (
+  CustomElementSymbol<TText, TElement, TMarker> |
+  LetElementSymbol<TElement, TMarker> |
+  TemplateControllerSymbol<TText, TElement, TMarker> |
+  TextSymbol<TText, TMarker>
+);
+
+/**
+ * A html attribute that is associated with a registered resource, specifically a template controller.
+ */
+export class TemplateControllerSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isTemplateController | SymbolFlags.hasMarker;
+  public partName: string | null;
+  public physicalNode: TElement | null = null;
+  public template: ParentNodeSymbol<TText, TElement, TMarker> | null = null;
+  public templateController: TemplateControllerSymbol<TText, TElement, TMarker> | null = null;
+  public marker: TMarker;
+
+  private _bindings: BindingSymbol[] | null = null;
+  public get bindings(): BindingSymbol[] {
+    if (this._bindings === null) {
+      this._bindings = [];
+      this.flags |= SymbolFlags.hasBindings;
+    }
+    return this._bindings;
+  }
+
+  private _parts: ReplacePartSymbol<TText, TElement, TMarker>[] | null = null;
+  public get parts(): ReplacePartSymbol<TText, TElement, TMarker>[] {
+    if (this._parts === null) {
+      this._parts = [];
+      this.flags |= SymbolFlags.hasParts;
+    }
+    return this._parts;
+  }
+
+  public constructor(
+    dom: IDOM,
+    public syntax: AttrSyntax,
+    public info: AttrInfo,
+    partName: string | null,
+    public res: string = info.name,
   ) {
-    this.attrDefCache = {};
-    this.elDefCache = {};
-    this.commandCache = {};
-    const syntax = this.elParser.parse(definition.templateOrNode);
-    definition.templateOrNode = syntax.node;
-    this.root = new ElementSymbol(
-      /*   semanticModel*/this,
-      /*isDefinitionRoot*/true,
-      /* $definitionRoot*/null,
-      /*         $parent*/null,
-      /*          syntax*/syntax,
-      /*      definition*/definition
-    );
-  }
-
-  public static create(
-    definition: ITemplateSource,
-    resources: IResourceDescriptions,
-    attrParser: IAttributeParser,
-    elParser: IElementParser,
-    exprParser: IExpressionParser): SemanticModel;
-  public static create(
-    definition: ITemplateSource,
-    resources: IResourceDescriptions,
-    locator: IServiceLocator): SemanticModel;
-  public static create(
-    definition: ITemplateSource,
-    resources: IResourceDescriptions,
-    attrParser: IServiceLocator | IAttributeParser,
-    elParser?: IElementParser,
-    exprParser?: IExpressionParser): SemanticModel {
-
-    if ('get' in attrParser) {
-      const locator = attrParser as IServiceLocator;
-      attrParser = locator.get<IAttributeParser>(IAttributeParser);
-      elParser = locator.get<IElementParser>(IElementParser);
-      exprParser = locator.get<IExpressionParser>(IExpressionParser);
-    }
-
-    return new SemanticModel(definition, resources, attrParser, elParser, exprParser);
-  }
-
-  public getAttributeDefinition(name: string): ICustomAttributeSource {
-    const existing = this.attrDefCache[name];
-    if (existing !== undefined) {
-      return existing;
-    }
-    const definition = <ICustomAttributeSource>this.resources.find(CustomAttributeResource, name) || null;
-    return this.attrDefCache[name] = definition;
-  }
-
-  public getElementDefinition(name: string): ITemplateSource {
-    const existing = this.elDefCache[name];
-    if (existing !== undefined) {
-      return existing;
-    }
-    const definition = <ITemplateSource>this.resources.find(CustomElementResource, name) || null;
-    return this.elDefCache[name] = definition;
-  }
-
-  public getBindingCommand(name: string): IBindingCommand {
-    const existing = this.commandCache[name];
-    if (existing !== undefined) {
-      return existing;
-    }
-    const instance = this.resources.create(BindingCommandResource, name) || null;
-    return this.commandCache[name] = instance;
-  }
-
-  public getAttributeSymbol(syntax: AttrSyntax, element: ElementSymbol): AttributeSymbol {
-    const definition = this.getAttributeDefinition(PLATFORM.camelCase(syntax.target));
-    const command = this.getBindingCommand(syntax.command);
-    return new AttributeSymbol(this, element, syntax, definition, command);
-  }
-
-  public getMultiAttrBindingSymbol(syntax: AttrSyntax, parent: AttributeSymbol): MultiAttributeBindingSymbol {
-    const command = this.getBindingCommand(syntax.command);
-    return new MultiAttributeBindingSymbol(this, parent, syntax, command);
-  }
-
-  public getElementSymbol(syntax: ElementSyntax, parent: ElementSymbol): ElementSymbol {
-    const node = syntax.node as Element;
-    let definition: ITemplateSource;
-    if (node.nodeType === NodeType.Element) {
-      const resourceKey = (node.getAttribute('as-element') || node.nodeName).toLowerCase();
-      definition = this.getElementDefinition(resourceKey);
-    }
-
-    return new ElementSymbol(
-      /*   semanticModel*/this,
-      /*isDefinitionRoot*/false,
-      /* $definitionRoot*/parent.$root,
-      /*         $parent*/parent,
-      /*          syntax*/syntax,
-      /*      definition*/definition
-    );
-  }
-
-  public getTemplateElementSymbol(syntax: ElementSyntax, parent: ElementSymbol, definition: ITemplateSource, definitionRoot: ElementSymbol): ElementSymbol {
-    return new ElementSymbol(
-      /*   semanticModel*/this,
-      /*isDefinitionRoot*/true,
-      /* $definitionRoot*/definitionRoot,
-      /*         $parent*/parent,
-      /*          syntax*/syntax,
-      /*      definition*/definition
-    );
+    this.partName = info.name === 'replaceable' ? partName : null;
+    this.marker = createMarker(dom);
   }
 }
 
-export interface IAttributeSymbol {
-  readonly isMultiAttrBinding: boolean;
-  readonly target: string;
-  readonly res: string | null;
-  readonly rawName: string;
-  readonly rawValue: string;
-  readonly rawCommand: string;
-  readonly syntax: AttrSyntax;
-  readonly command: IBindingCommand | null;
-  readonly dest: string;
-  readonly mode: BindingMode;
-  readonly bindable: IBindableDescription;
-  readonly hasBindingCommand: boolean;
-  readonly isHandledByBindingCommand: boolean;
-  readonly isTemplateController: boolean;
-  readonly isCustomAttribute: boolean;
-  readonly isAttributeBindable: boolean;
-  readonly isDefaultAttributeBindable: boolean;
-  readonly onCustomElement: boolean;
-  readonly isElementBindable: boolean;
-  readonly $element: ElementSymbol;
+/**
+ * Wrapper for an element (with all of its attributes, regardless of the order in which they are declared)
+ * that has a replace attribute on it.
+ *
+ * This element will be lifted from the DOM just like a template controller.
+ */
+export class ReplacePartSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isReplacePart;
+
+  public constructor(
+    public name: string,
+    public physicalNode: TElement | null = null,
+    public parent: ParentNodeSymbol<TText, TElement, TMarker> | null = null,
+    public template: ParentNodeSymbol<TText, TElement, TMarker> | null = null,
+  ) {}
 }
 
-export class MultiAttributeBindingSymbol implements IAttributeSymbol {
-  public readonly isMultiAttrBinding: boolean = true;
-  public readonly target: string;
-  public readonly res: string = null;
-  public readonly rawName: string;
-  public readonly rawValue: string;
-  public readonly rawCommand: string | null;
-  public readonly dest: string;
-  public readonly mode: BindingMode;
-  public readonly bindable: Immutable<Required<IBindableDescription>> | null = null;
-  public readonly hasBindingCommand: boolean;
-  public readonly isHandledByBindingCommand: boolean;
-  public readonly isTemplateController: boolean = false;
-  public readonly isCustomAttribute: boolean = true;
-  public readonly isAttributeBindable: boolean = false;
-  public readonly isDefaultAttributeBindable: boolean = false;
-  public readonly onCustomElement: boolean = false;
-  public readonly isElementBindable: boolean = false;
-  public readonly $element: ElementSymbol = null;
+/**
+ * A html attribute that is associated with a registered resource, but not a template controller.
+ */
+export class CustomAttributeSymbol {
+  public flags: SymbolFlags = SymbolFlags.isCustomAttribute;
 
-  constructor(
-    public readonly semanticModel: SemanticModel,
-    public readonly $parent: AttributeSymbol,
-    public readonly syntax: AttrSyntax,
-    public readonly command: IBindingCommand | null
-  ) {
-    this.target = syntax.target;
-    this.rawName = syntax.rawName;
-    this.rawValue = syntax.rawValue;
-    this.rawCommand = syntax.command;
-    this.hasBindingCommand = !!command;
-    this.isHandledByBindingCommand = this.hasBindingCommand && command.handles(this);
-    const bindables = $parent.definition.bindables;
-    for (const prop in bindables) {
-      const b = bindables[prop];
-      if (b.property === syntax.target) {
-        this.dest = b.property;
-        this.mode =  (b.mode && b.mode !== BindingMode.default) ? b.mode : BindingMode.toView;
-        this.bindable = b as Immutable<Required<IBindableDescription>>;
-        this.isAttributeBindable = true;
-        break;
-      }
+  private _bindings: BindingSymbol[] | null = null;
+  public get bindings(): BindingSymbol[] {
+    if (this._bindings === null) {
+      this._bindings = [];
+      this.flags |= SymbolFlags.hasBindings;
     }
-    if (!this.isAttributeBindable) {
-      this.dest = syntax.target;
-      this.mode = $parent.definition.defaultBindingMode || BindingMode.toView;
-    }
+    return this._bindings;
   }
+
+  public constructor(
+    public syntax: AttrSyntax,
+    public info: AttrInfo,
+    public res: string = info.name,
+  ) {}
 }
 
-export class AttributeSymbol implements IAttributeSymbol {
-  public readonly isMultiAttrBinding: boolean = false;
-  public readonly $multiAttrBindings: ReadonlyArray<MultiAttributeBindingSymbol>;
-  public readonly target: string;
-  public readonly res: string | null = null;
-  public readonly rawName: string;
-  public readonly rawValue: string;
-  public readonly rawCommand: string | null;
-  public readonly dest: string;
-  public readonly mode: BindingMode;
-  public readonly bindable: Immutable<Required<IBindableDescription>> | null = null;
-  public readonly isAttributeBindable: boolean = false;
-  public readonly isDefaultAttributeBindable: boolean = false;
-  public readonly isCustomAttribute: boolean;
-  public readonly isElementBindable: boolean = false;
-  public readonly onCustomElement: boolean;
-  public readonly isBindable: boolean = false;
-  public readonly isTemplateController: boolean = false;
-  public readonly hasBindingCommand: boolean;
-  public readonly isHandledByBindingCommand: boolean;
-  private _isProcessed: boolean;
-  public get isProcessed(): boolean {
-    return this._isProcessed;
+/**
+ * An attribute, with either a binding command or an interpolation, whose target is the html
+ * attribute of the element.
+ *
+ * This will never target a bindable property of a custom attribute or element;
+ */
+export class PlainAttributeSymbol {
+  public flags: SymbolFlags = SymbolFlags.isPlainAttribute;
+
+  public constructor(
+    public syntax: AttrSyntax,
+    public command: BindingCommandInstance | null,
+    public expression: AnyBindingExpression | null
+  ) {}
+}
+
+/**
+ * Either an attribute on an custom element that maps to a declared bindable property of that element,
+ * a single-value bound custom attribute, or one of several bindables that were extracted from the attribute
+ * value of a custom attribute with multiple bindings usage.
+ *
+ * This will always target a bindable property of a custom attribute or element;
+ */
+export class BindingSymbol {
+  public flags: SymbolFlags = SymbolFlags.isBinding;
+
+  public constructor(
+    public command: BindingCommandInstance | null,
+    public bindable: BindableInfo,
+    public expression: AnyBindingExpression | null,
+    public rawValue: string,
+    public target: string
+  ) {}
+}
+
+/**
+ * A html element that is associated with a registered resource either via its (lowerCase) `nodeName`
+ * or the value of its `as-element` attribute.
+ */
+export class CustomElementSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isCustomElement;
+  public isTarget: true = true;
+  public templateController: TemplateControllerSymbol<TText, TElement, TMarker> | null = null;
+  public isContainerless: boolean;
+  public marker: TMarker;
+
+  private _customAttributes: CustomAttributeSymbol[] | null = null;
+  public get customAttributes(): CustomAttributeSymbol[] {
+    if (this._customAttributes === null) {
+      this._customAttributes = [];
+      this.flags |= SymbolFlags.hasAttributes;
+    }
+    return this._customAttributes;
   }
 
-  constructor(
-    public readonly semanticModel: SemanticModel,
-    public readonly $element: ElementSymbol,
-    public readonly syntax: AttrSyntax,
-    public readonly definition: ICustomAttributeSource | null,
-    public readonly command: IBindingCommand | null
+  private _plainAttributes: PlainAttributeSymbol[] | null = null;
+  public get plainAttributes(): PlainAttributeSymbol[] {
+    if (this._plainAttributes === null) {
+      this._plainAttributes = [];
+      this.flags |= SymbolFlags.hasAttributes;
+    }
+    return this._plainAttributes;
+  }
+
+  private _bindings: BindingSymbol[] | null = null;
+  public get bindings(): BindingSymbol[] {
+    if (this._bindings === null) {
+      this._bindings = [];
+      this.flags |= SymbolFlags.hasBindings;
+    }
+    return this._bindings;
+  }
+
+  private _childNodes: NodeSymbol<TText, TElement, TMarker>[] | null = null;
+  public get childNodes(): NodeSymbol<TText, TElement, TMarker>[] {
+    if (this._childNodes === null) {
+      this._childNodes = [];
+      this.flags |= SymbolFlags.hasChildNodes;
+    }
+    return this._childNodes;
+  }
+
+  private _parts: ReplacePartSymbol<TText, TElement, TMarker>[] | null = null;
+  public get parts(): ReplacePartSymbol<TText, TElement, TMarker>[] {
+    if (this._parts === null) {
+      this._parts = [];
+      this.flags |= SymbolFlags.hasParts;
+    }
+    return this._parts;
+  }
+
+  public constructor(
+    dom: IDOM,
+    public physicalNode: TElement,
+    public info: ElementInfo,
+    public res: string = info.name,
+    public bindables: Record<string, BindableInfo | undefined> = info.bindables,
   ) {
-    this.target = syntax.target;
-    this.rawName = syntax.rawName;
-    this.rawValue = syntax.rawValue;
-    this.rawCommand = syntax.command;
-    this.isCustomAttribute = !!definition;
-    this.hasBindingCommand = !!command;
-    this.isHandledByBindingCommand = this.hasBindingCommand && command.handles(this);
-    this.onCustomElement = $element.isCustomElement;
-    this._isProcessed = this.rawName === 'as-element'; // as-element is processed by the semantic model and shouldn't be processed by the template compiler
-    if (this.isCustomAttribute) {
-      this.isTemplateController = !!definition.isTemplateController;
-      this.res = definition.name;
-      const value = syntax.rawValue;
-      let lastIndex = 0;
-      let multiAttrBindings: MultiAttributeBindingSymbol[];
-      for (let i = 0, ii = value.length; i < ii; ++i) {
-        if (value.charCodeAt(i) === Char.Semicolon) {
-          if (!this.isMultiAttrBinding) {
-            multiAttrBindings = [];
-            this.isMultiAttrBinding = true;
-          }
-          const innerAttr = value.slice(lastIndex, i).trim();
-          lastIndex = i + 1;
-          if (innerAttr.length === 0) {
-            continue;
-          }
-          for (let j = 0, jj = innerAttr.length; j < jj; ++j) {
-            if (innerAttr.charCodeAt(j) === Char.Colon) {
-              const innerAttrName = innerAttr.slice(0, j).trim();
-              const innerAttrValue = innerAttr.slice(j + 1).trim();
-              const innerAttrSyntax = this.semanticModel.attrParser.parse(innerAttrName, innerAttrValue);
-              multiAttrBindings.push(this.semanticModel.getMultiAttrBindingSymbol(innerAttrSyntax, this));
-            }
-          }
-        }
-      }
-      this.$multiAttrBindings = this.isMultiAttrBinding ? multiAttrBindings : PLATFORM.emptyArray;
-      const bindables = definition.bindables;
-      if (!this.isMultiAttrBinding) {
-        for (const prop in bindables) {
-          const b = bindables[prop];
-          this.dest = b.property;
-          this.mode =  (b.mode && b.mode !== BindingMode.default) ? b.mode : (definition.defaultBindingMode || BindingMode.toView);
-          this.bindable = b as Immutable<Required<IBindableDescription>>;
-          this.isBindable = this.isAttributeBindable = true;
-          break;
-        }
-        if (!this.isAttributeBindable) {
-          this.dest = 'value';
-          this.mode = definition.defaultBindingMode || BindingMode.toView;
-          this.isBindable = this.isAttributeBindable = this.isDefaultAttributeBindable = true;
-        }
-      }
-    } else if ($element.isCustomElement) {
-      const bindables = $element.definition.bindables;
-      for (const prop in bindables) {
-        const b = bindables[prop];
-        if (b.attribute === syntax.target) {
-          this.dest = b.property;
-          this.mode = (b.mode && b.mode !== BindingMode.default) ? b.mode : BindingMode.toView;
-          this.bindable = b as Immutable<Required<IBindableDescription>>;
-          this.isBindable = this.isElementBindable = true;
-          break;
-        }
-      }
-      if (!this.isElementBindable) {
-        this.dest = syntax.target;
-        this.mode = BindingMode.toView;
-      }
+    if (info.containerless) {
+      this.isContainerless = true;
+      this.marker = createMarker(dom);
+      this.flags |= SymbolFlags.hasMarker;
     } else {
-      this.dest = syntax.target;
-      this.mode = BindingMode.toView;
-    }
-  }
-
-  public markAsProcessed(): void {
-    this._isProcessed = true;
-    if (this.isTemplateController) {
-      (<Element>this.$element.node).removeAttribute(this.rawName);
+      this.isContainerless = false;
+      this.marker = null!;
     }
   }
 }
 
-export class ElementSymbol {
-  public readonly $attributes: ReadonlyArray<AttributeSymbol>;
-  public readonly $children: ReadonlyArray<ElementSymbol>;
-  public readonly $liftedChildren: ReadonlyArray<ElementSymbol>;
-  public get $content(): ElementSymbol {
-    return this._$content;
-  }
-  public get isMarker(): boolean {
-    return this._isMarker;
-  }
-  public get isTemplate(): boolean {
-    return this._isTemplate;
-  }
-  public get isSlot(): boolean {
-    return this._isSlot;
-  }
-  public get isLet(): boolean {
-    return this._isLet;
-  }
-  public get node(): Node {
-    return this._node;
-  }
-  public get syntax(): ElementSyntax {
-    return this._syntax;
-  }
-  public get name(): string {
-    return this._name;
-  }
-  public get isCustomElement(): boolean {
-    return this._isCustomElement;
-  }
-  public get nextSibling(): ElementSymbol {
-    if (!this.$parent) {
-      return null;
+export class LetElementSymbol<TElement extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isLetElement | SymbolFlags.hasMarker;
+  public toBindingContext: boolean = false;
+
+  private _bindings: BindingSymbol[] | null = null;
+  public get bindings(): BindingSymbol[] {
+    if (this._bindings === null) {
+      this._bindings = [];
+      this.flags |= SymbolFlags.hasBindings;
     }
-    const siblings = this.$parent.$children;
-    for (let i = 0, ii = siblings.length; i < ii; ++i) {
-      if (siblings[i] === this) {
-        return siblings[i + 1] || null;
-      }
+    return this._bindings;
+  }
+
+  public constructor(
+    dom: IDOM,
+    public physicalNode: TElement,
+    public marker: TMarker = createMarker(dom),
+  ) {}
+}
+
+/**
+ * A normal html element that may or may not have attribute behaviors and/or child node behaviors.
+ *
+ * It is possible for a PlainElementSymbol to not yield any instructions during compilation.
+ */
+export class PlainElementSymbol<TText extends INode = INode, TElement extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isPlainElement;
+
+  public isTarget: boolean = false;
+  public templateController: TemplateControllerSymbol<TText, TElement, TMarker> | null = null;
+  public hasSlots: boolean = false;
+
+  private _customAttributes: CustomAttributeSymbol[] | null = null;
+  public get customAttributes(): CustomAttributeSymbol[] {
+    if (this._customAttributes === null) {
+      this._customAttributes = [];
+      this.flags |= SymbolFlags.hasAttributes;
     }
-    return null;
+    return this._customAttributes;
   }
-  public get firstChild(): ElementSymbol {
-    return this.$children[0] || null;
-  }
-  public get componentRoot(): ElementSymbol {
-    return this.semanticModel.root;
-  }
-  public get isLifted(): boolean {
-    return this._isLifted;
-  }
-  private _$content: ElementSymbol = null;
-  private _isMarker: boolean = false;
-  private _isTemplate: boolean = false;
-  private _isSlot: boolean = false;
-  private _isLet: boolean = false;
-  private _node: Node;
-  private _syntax: ElementSyntax;
-  private _name: string;
-  private _isCustomElement: boolean;
-  private _isLifted: boolean = false;
 
-  constructor(
-    public readonly semanticModel: SemanticModel,
-    public readonly isRoot: boolean,
-    public readonly $root: ElementSymbol,
-    public readonly $parent: ElementSymbol,
-    syntax: ElementSyntax,
-    public readonly definition: ITemplateSource | null
-  ) {
-    this.$root = isRoot ? this : $root;
-    this._node = syntax.node;
-    this._syntax = syntax;
-    this._name = this.node.nodeName;
-    switch (this.name) {
-      case 'TEMPLATE':
-        this._isTemplate = true;
-        this._$content = this.semanticModel.getElementSymbol(syntax.$content, this);
-        break;
-      case 'SLOT':
-        this._isSlot = true;
-        break;
-      case 'LET':
-        this._isLet = true;
+  private _plainAttributes: PlainAttributeSymbol[] | null = null;
+  public get plainAttributes(): PlainAttributeSymbol[] {
+    if (this._plainAttributes === null) {
+      this._plainAttributes = [];
+      this.flags |= SymbolFlags.hasAttributes;
     }
-    this._isCustomElement = !isRoot && !!definition;
+    return this._plainAttributes;
+  }
 
-    const attributes = syntax.$attributes;
-    const attrLen = attributes.length;
-    if (attrLen > 0) {
-      const attrSymbols = Array<AttributeSymbol>(attrLen);
-      for (let i = 0, ii = attrLen; i < ii; ++i) {
-        attrSymbols[i] = this.semanticModel.getAttributeSymbol(attributes[i], this);
-      }
-      this.$attributes = attrSymbols;
-    } else {
-      this.$attributes = PLATFORM.emptyArray as AttributeSymbol[];
+  private _childNodes: NodeSymbol<TText, TElement, TMarker>[] | null = null;
+  public get childNodes(): NodeSymbol<TText, TElement, TMarker>[] {
+    if (this._childNodes === null) {
+      this._childNodes = [];
+      this.flags |= SymbolFlags.hasChildNodes;
     }
-
-    const children = syntax.$children;
-    const childLen = children.length;
-    if (childLen > 0) {
-      const childSymbols = Array<ElementSymbol>(childLen);
-      for (let i = 0, ii = childLen; i < ii; ++i) {
-        childSymbols[i] = this.semanticModel.getElementSymbol(children[i], this);
-      }
-      this.$children = childSymbols;
-    } else {
-      this.$children = PLATFORM.emptyArray as ElementSymbol[];
-    }
+    return this._childNodes;
   }
 
-  public makeTarget(): void {
-    (<Element>this.node).classList.add('au');
-  }
+  public constructor(
+    dom: IDOM,
+    public physicalNode: TElement,
+  ) {}
+}
 
-  public replaceTextNodeWithMarker(): void {
-    const marker = ElementSyntax.createMarker();
-    const node = this.node;
-    node.parentNode.insertBefore(marker.node, node);
-    node.textContent = ' ';
-    while (node.nextSibling && node.nextSibling.nodeType === NodeType.Text) {
-      node.parentNode.removeChild(node.nextSibling);
-    }
-    this.setToMarker(marker);
-  }
+/**
+ * A standalone text node that has an interpolation.
+ */
+export class TextSymbol<TText extends INode = INode, TMarker extends INode = INode> {
+  public flags: SymbolFlags = SymbolFlags.isText | SymbolFlags.hasMarker;
 
-  public replaceNodeWithMarker(): void {
-    const marker = ElementSyntax.createMarker();
-    const node = this.node;
-    if (node.parentNode) {
-      node.parentNode.replaceChild(marker.node, node);
-    } else if (this.isTemplate) {
-      (<HTMLTemplateElement>node).content.appendChild(marker.node);
-    }
-    this.setToMarker(marker);
-  }
-
-  public lift(instruction: HydrateTemplateController): ElementSymbol {
-    const template = instruction.src.templateOrNode = DOM.createTemplate() as HTMLTemplateElement;
-    const node = this.node as HTMLTemplateElement;
-    if (this.isTemplate) {
-      // copy remaining attributes over to the newly created template
-      const attributes = node.attributes;
-      while (attributes.length) {
-        const attr = attributes[0];
-        template.setAttribute(attr.name, attr.value);
-        node.removeAttribute(attr.name);
-      }
-      template.content.appendChild(node.content);
-      this.replaceNodeWithMarker();
-    } else {
-      this.replaceNodeWithMarker();
-      template.content.appendChild(node);
-    }
-    this.addInstructions([instruction]);
-    this._isLifted = true;
-    return this.semanticModel.getTemplateElementSymbol(
-      this.semanticModel.elParser.parse(template), this, instruction.src, null
-    );
-  }
-
-  public addInstructions(instructions: TargetedInstruction[]): void {
-    this.$root.definition.instructions.push(instructions);
-  }
-
-  private setToMarker(marker: ElementSyntax): void {
-    this._$content = null;
-    this._isCustomElement = this._isLet = this._isSlot = this._isTemplate = false;
-    this._isMarker = true;
-    this._name = 'AU-MARKER';
-    this._node = marker.node;
-    this._syntax = marker;
-  }
+  public constructor(
+    dom: IDOM,
+    public physicalNode: TText,
+    public interpolation: IInterpolationExpression,
+    public marker: TMarker = createMarker(dom),
+  ) {}
 }

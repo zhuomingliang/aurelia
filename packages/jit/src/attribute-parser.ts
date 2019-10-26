@@ -1,52 +1,46 @@
-import { DI } from '@aurelia/kernel';
-import { Char } from '.';
-
-export class AttrSyntax {
-  constructor(
-    public readonly rawName: string,
-    public readonly rawValue: string,
-    public readonly target: string,
-    public readonly command: string | null) { }
-}
+import { all, DI, Key, Profiler } from '@aurelia/kernel';
+import { AttrSyntax } from './ast';
+import { IAttributePattern, IAttributePatternHandler, Interpretation, ISyntaxInterpreter } from './attribute-pattern';
 
 export interface IAttributeParser {
   parse(name: string, value: string): AttrSyntax;
 }
 
-export const IAttributeParser = DI.createInterface<IAttributeParser>()
-  .withDefault(x => x.singleton(AttributeParser));
+export const IAttributeParser = DI.createInterface<IAttributeParser>('IAttributeParser').withDefault(x => x.singleton(AttributeParser));
 
-/*@internal*/
+const { enter, leave } = Profiler.createTimer('AttributeParser');
+
+/** @internal */
 export class AttributeParser implements IAttributeParser {
-  private cache: Record<string, [string, string]>;
+  public static readonly inject: readonly Key[] = [ISyntaxInterpreter, all(IAttributePattern)];
 
-  constructor() {
+  private readonly interpreter: ISyntaxInterpreter;
+  private readonly cache: Record<string, Interpretation>;
+  private readonly patterns: Record<string, IAttributePatternHandler>;
+
+  public constructor(interpreter: ISyntaxInterpreter, attrPatterns: IAttributePattern[]) {
+    this.interpreter = interpreter;
     this.cache = {};
+    const patterns: AttributeParser['patterns'] = this.patterns = {};
+    attrPatterns.forEach(attrPattern => {
+      const defs = attrPattern.$patternDefs;
+      interpreter.add(defs);
+      defs.forEach(def => {
+        patterns[def.pattern] = attrPattern as unknown as IAttributePatternHandler;
+      });
+    });
   }
 
   public parse(name: string, value: string): AttrSyntax {
-    let target: string;
-    let command: string;
-    const existing = this.cache[name];
-    if (existing === undefined) {
-      let lastIndex = 0;
-      target = name;
-      for (let i = 0, ii = name.length; i < ii; ++i) {
-        if (name.charCodeAt(i) === Char.Dot) {
-          // set the targetName to only the part that comes before the first dot
-          if (name === target) {
-            target = name.slice(0, i);
-          }
-          lastIndex = i;
-        }
-      }
-      command = lastIndex > 0 ? name.slice(lastIndex + 1) : null;
-      this.cache[name] = [target, command];
-    } else {
-      target = existing[0];
-      command = existing[1];
+    let interpretation = this.cache[name];
+    if (interpretation == null) {
+      interpretation = this.cache[name] = this.interpreter.interpret(name);
     }
-
-    return new AttrSyntax(name, value, target, command && command.length ? command : null);
+    const pattern = interpretation.pattern;
+    if (pattern == null) {
+      return new AttrSyntax(name, value, name, null);
+    } else {
+      return this.patterns[pattern][pattern](name, value, interpretation.parts);
+    }
   }
 }

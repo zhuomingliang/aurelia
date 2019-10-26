@@ -1,7 +1,20 @@
-import { Decoratable, Decorated, IIndexable, Writable } from '@aurelia/kernel';
-import { IBinding, IBindingTargetObserver, IObserverLocator, IPropertySubscriber, StrictAny } from '.';
+import {
+  Class
+} from '@aurelia/kernel';
+import { IConnectable } from '../ast';
+import { LifecycleFlags } from '../flags';
+import { IBinding } from '../lifecycle';
+import {
+  IBindingTargetObserver,
+  IProxySubscribable,
+  ISubscribable,
+  ISubscriber
+} from '../observation';
+import { IObserverLocator } from '../observation/observer-locator';
 
 // TODO: add connect-queue (or something similar) back in when everything else is working, to improve startup time
+
+const slice = Array.prototype.slice;
 
 const slotNames: string[] = [];
 const versionSlotNames: string[] = [];
@@ -18,22 +31,25 @@ function ensureEnoughSlotNames(currentSlot: number): void {
 }
 ensureEnoughSlotNames(-1);
 
-export interface IPartialConnectableBinding extends IBinding, IPropertySubscriber {
+export interface IPartialConnectableBinding extends IBinding, ISubscriber {
   observerLocator: IObserverLocator;
 }
 
-export interface IConnectableBinding extends IPartialConnectableBinding {
+export interface IConnectableBinding extends IPartialConnectableBinding, IConnectable {
+  id: number;
   observerSlots: number;
   version: number;
-  observeProperty(obj: StrictAny, propertyName: StrictAny): void;
-  addObserver(observer: IBindingTargetObserver): void;
+  addObserver(observer: ISubscribable | IProxySubscribable): void;
   unobserve(all?: boolean): void;
 }
 
-/*@internal*/
-export function addObserver(this: IConnectableBinding, observer: IBindingTargetObserver): void {
+/** @internal */
+export function addObserver(
+  this: IConnectableBinding & { [key: string]: ISubscribable & { [id: string]: number } | number },
+  observer: ISubscribable & { [id: number]: number }
+): void {
   // find the observer.
-  const observerSlots = this.observerSlots === undefined ? 0 : this.observerSlots;
+  const observerSlots = this.observerSlots == null ? 0 : this.observerSlots;
   let i = observerSlots;
 
   while (i-- && this[slotNames[i]] !== observer);
@@ -46,22 +62,23 @@ export function addObserver(this: IConnectableBinding, observer: IBindingTargetO
     }
     this[slotNames[i]] = observer;
     observer.subscribe(this);
+    observer[this.id] |= LifecycleFlags.updateTargetInstance;
     // increment the slot count.
     if (i === observerSlots) {
       this.observerSlots = i + 1;
     }
   }
   // set the "version" when the observer was used.
-  if (this.version === undefined) {
+  if (this.version == null) {
     this.version = 0;
   }
   this[versionSlotNames[i]] = this.version;
   ensureEnoughSlotNames(i);
 }
 
-/*@internal*/
-export function observeProperty(this: IConnectableBinding, obj: IIndexable, propertyName: string): void {
-  const observer = this.observerLocator.getObserver(obj, propertyName) as IBindingTargetObserver;
+/** @internal */
+export function observeProperty(this: IConnectableBinding, flags: LifecycleFlags, obj: object, propertyName: string): void {
+  const observer = this.observerLocator.getObserver(flags, obj, propertyName) as IBindingTargetObserver;
   /* Note: we need to cast here because we can indeed get an accessor instead of an observer,
    *  in which case the call to observer.subscribe will throw. It's not very clean and we can solve this in 2 ways:
    *  1. Fail earlier: only let the locator resolve observers from .getObserver, and throw if no branches are left (e.g. it would otherwise return an accessor)
@@ -72,18 +89,19 @@ export function observeProperty(this: IConnectableBinding, obj: IIndexable, prop
   this.addObserver(observer);
 }
 
-/*@internal*/
-export function unobserve(this: IConnectableBinding, all?: boolean): void {
+/** @internal */
+export function unobserve(this: IConnectableBinding & { [key: string]: unknown }, all?: boolean): void {
   const slots = this.observerSlots;
   let slotName: string;
-  let observer: IBindingTargetObserver;
+  let observer: IBindingTargetObserver & { [key: string]: number };
   if (all === true) {
     for (let i = 0; i < slots; ++i) {
       slotName = slotNames[i];
-      observer = this[slotName];
-      if (observer !== null && observer !== undefined) {
-        this[slotName] = null;
+      observer = this[slotName] as IBindingTargetObserver & { [key: string]: number };
+      if (observer != null) {
+        this[slotName] = void 0;
         observer.unsubscribe(this);
+        observer[this.id] &= ~LifecycleFlags.updateTargetInstance;
       }
     }
   } else {
@@ -91,29 +109,36 @@ export function unobserve(this: IConnectableBinding, all?: boolean): void {
     for (let i = 0; i < slots; ++i) {
       if (this[versionSlotNames[i]] !== version) {
         slotName = slotNames[i];
-        observer = this[slotName];
-        if (observer !== null && observer !== undefined) {
-          this[slotName] = null;
+        observer = this[slotName] as IBindingTargetObserver & { [key: string]: number };
+        if (observer != null) {
+          this[slotName] = void 0;
           observer.unsubscribe(this);
+          observer[this.id] &= ~LifecycleFlags.updateTargetInstance;
         }
       }
     }
   }
 }
 
-type DecoratableConnectable = Decoratable<IConnectableBinding, IPartialConnectableBinding>;
-type DecoratedConnectable = Decorated<IConnectableBinding, IPartialConnectableBinding>;
+type DecoratableConnectable<TProto, TClass> = Class<TProto & Partial<IConnectableBinding> & IPartialConnectableBinding, TClass>;
+type DecoratedConnectable<TProto, TClass> = Class<TProto & IConnectableBinding, TClass>;
 
-function connectableDecorator(target: DecoratableConnectable): DecoratedConnectable {
+function connectableDecorator<TProto, TClass>(target: DecoratableConnectable<TProto, TClass>): DecoratedConnectable<TProto, TClass> {
   const proto = target.prototype;
-  if (!proto.hasOwnProperty('observeProperty')) proto.observeProperty = observeProperty;
-  if (!proto.hasOwnProperty('unobserve')) proto.unobserve = unobserve;
-  if (!proto.hasOwnProperty('addObserver')) proto.addObserver = addObserver;
-  return target as DecoratedConnectable;
+  if (!Object.prototype.hasOwnProperty.call(proto, 'observeProperty')) proto.observeProperty = observeProperty;
+  if (!Object.prototype.hasOwnProperty.call(proto, 'unobserve')) proto.unobserve = unobserve;
+  if (!Object.prototype.hasOwnProperty.call(proto, 'addObserver')) proto.addObserver = addObserver;
+  return target as DecoratedConnectable<TProto, TClass>;
 }
 
 export function connectable(): typeof connectableDecorator;
-export function connectable(target: DecoratableConnectable): DecoratedConnectable;
-export function connectable(target?: DecoratableConnectable): DecoratedConnectable | typeof connectableDecorator {
-  return target === undefined ? connectableDecorator : connectableDecorator(target);
+export function connectable<TProto, TClass>(target: DecoratableConnectable<TProto, TClass>): DecoratedConnectable<TProto, TClass>;
+export function connectable<TProto, TClass>(target?: DecoratableConnectable<TProto, TClass>): DecoratedConnectable<TProto, TClass> | typeof connectableDecorator {
+  return target == null ? connectableDecorator : connectableDecorator(target);
 }
+
+let value = 0;
+
+connectable.assignIdTo = (instance: IConnectableBinding): void => {
+  instance.id = ++value;
+};

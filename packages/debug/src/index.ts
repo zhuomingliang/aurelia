@@ -1,4 +1,14 @@
-export * from './binding/binding-context';
-export * from './binding/unparser';
-export * from './configuration';
-export * from './reporter';
+export {
+  DebugConfiguration,
+  TraceConfiguration
+} from './configuration';
+
+export {
+  DebugTracer,
+  stringifyLifecycleFlags,
+} from './tracer';
+
+export {
+  Unparser,
+  Serializer,
+} from './binding/unparser';

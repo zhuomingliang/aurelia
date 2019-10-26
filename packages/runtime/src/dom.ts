@@ -1,241 +1,174 @@
-import { DI, IContainer, IResolver, PLATFORM } from '@aurelia/kernel';
-import { ICustomElement } from '.';
+import {
+  DI,
+  IContainer,
+  IResolver,
+  PLATFORM,
+  Reporter,
+} from '@aurelia/kernel';
+import {
+  IController
+} from './lifecycle';
+import { IScheduler } from './scheduler';
 
-export interface INodeLike {
-  readonly firstChild: INode | null;
-  readonly lastChild: INode | null;
-  readonly childNodes: ArrayLike<INode>;
+export interface INode extends Object {
+  $au?: Record<string, IController<this>>;
 }
 
-export interface INode extends INodeLike {
-  readonly parentNode: INode | null;
-  readonly nextSibling: INode | null;
-  readonly previousSibling: INode | null;
+export const INode = DI.createInterface<INode>('INode').noDefault();
+
+export const IRenderLocation = DI.createInterface<IRenderLocation>('IRenderLocation').noDefault();
+export interface IRenderLocation<T extends INode = INode> extends INode {
+  $start?: IRenderLocation<T>;
+  $nodes?: INodeSequence<T> | Readonly<{}>;
 }
-
-export interface ICustomElementHost extends INode {
-  $customElement?: ICustomElement;
-}
-
-export const INode = DI.createInterface<INode>().noDefault();
-
-export interface IRenderLocation extends ICustomElementHost { }
-
-
-export const IRenderLocation = DI.createInterface<IRenderLocation>().noDefault();
 
 /**
  * Represents a DocumentFragment
  */
-export interface INodeSequence extends INodeLike {
+export interface INodeSequence<T extends INode = INode> extends INode {
+  readonly isMounted: boolean;
+  readonly isLinked: boolean;
+
+  readonly next?: INodeSequence<T>;
+
   /**
    * The nodes of this sequence.
    */
-  childNodes: ReadonlyArray<INode>;
+  readonly childNodes: ArrayLike<T>;
+
+  readonly firstChild: T;
+
+  readonly lastChild: T;
 
   /**
    * Find all instruction targets in this sequence.
    */
-  findTargets(): ArrayLike<INode> | ReadonlyArray<INode>;
+  findTargets(): ArrayLike<T>;
 
   /**
    * Insert this sequence as a sibling before refNode
    */
-  insertBefore(refNode: INode): void;
+  insertBefore(refNode: T | IRenderLocation<T>): void;
 
   /**
    * Append this sequence as a child to parent
    */
-  appendTo(parent: INode): void;
+  appendTo(parent: T): void;
 
   /**
-   * Remove this sequence from its parent.
+   * Remove this sequence from the DOM.
    */
   remove(): void;
+
+  addToLinked(): void;
+
+  unlink(): void;
+
+  link(next: INodeSequence<T> | IRenderLocation<T> | undefined): void;
 }
 
-export interface INodeObserver {
-  disconnect(): void;
+export const IDOM = DI.createInterface<IDOM>('IDOM').noDefault();
+
+export interface IDOM<T extends INode = INode> {
+  addEventListener(eventName: string, subscriber: unknown, publisher?: unknown, options?: unknown): void;
+  appendChild(parent: T, child: T): void;
+  cloneNode<TClone extends T>(node: TClone, deep?: boolean): TClone;
+  convertToRenderLocation(node: T): IRenderLocation<T>;
+  createDocumentFragment(markupOrNode?: string | T): T;
+  createElement(name: string): T;
+  createCustomEvent(eventType: string, options?: unknown): unknown;
+  dispatchEvent(evt: unknown): void;
+  createNodeObserver?(node: T, cb: (...args: unknown[]) => void, init: unknown): unknown;
+  createTemplate(markup?: string): T;
+  createTextNode(text: string): T;
+  insertBefore(nodeToInsert: T, referenceNode: T): void;
+  isMarker(node: unknown): node is T;
+  isNodeInstance(potentialNode: unknown): potentialNode is T;
+  isRenderLocation(node: unknown): node is IRenderLocation<T>;
+  makeTarget(node: T): void;
+  registerElementResolver(container: IContainer, resolver: IResolver): void;
+  remove(node: T): void;
+  removeEventListener(eventName: string, subscriber: unknown, publisher?: unknown, options?: unknown): void;
+  setAttribute(node: T, name: string, value: unknown): void;
 }
 
-/*@internal*/
-export function createNodeSequenceFromFragment(fragment: DocumentFragment): INodeSequence {
-  return new FragmentNodeSequence(<DocumentFragment>fragment.cloneNode(true));
-}
+const ni = function(...args: unknown[]): unknown {
+  throw Reporter.error(1000); // TODO: create error code (not implemented exception)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+} as any; // this function doesn't need typing because it is never directly called
 
-// pre-declare certain functions whose behavior depends on a once-checked global condition for better performance
-function returnTrue(): true {
-  return true;
-}
+const niDOM: IDOM = {
+  addEventListener: ni,
+  appendChild: ni,
+  cloneNode: ni,
+  convertToRenderLocation: ni,
+  createDocumentFragment: ni,
+  createElement: ni,
+  createCustomEvent: ni,
+  dispatchEvent: ni,
+  createNodeObserver: ni,
+  createTemplate: ni,
+  createTextNode: ni,
+  insertBefore: ni,
+  isMarker: ni,
+  isNodeInstance: ni,
+  isRenderLocation: ni,
+  makeTarget: ni,
+  registerElementResolver: ni,
+  remove: ni,
+  removeEventListener: ni,
+  setAttribute: ni
+};
 
-function returnFalse(): false {
-  return false;
-}
-
-function removeNormal(node: Element): void {
-  node.remove();
-}
-
-function removePolyfilled(node: Element): void {
-  // not sure if we still actually need this, this used to be an IE9/10 thing
-  node.parentNode.removeChild(node);
-}
-
-export const DOM = {
-  createFactoryFromMarkupOrNode(markupOrNode: string | INode): () => INodeSequence {
-    let template: HTMLTemplateElement;
-    if (markupOrNode instanceof Node) {
-      if ((<HTMLTemplateElement>markupOrNode).content) {
-        template = markupOrNode as any;
-      } else {
-        template = DOM.createTemplate() as any;
-        template.content.appendChild(<Node>markupOrNode);
+export const DOM: IDOM & {
+  readonly isInitialized: boolean;
+  readonly scheduler: IScheduler;
+  initialize(dom: IDOM): void;
+  destroy(): void;
+} = {
+  ...niDOM,
+  scheduler: (void 0)!,
+  get isInitialized(): boolean {
+    return Reflect.get(this, '$initialized') === true;
+  },
+  initialize(dom: IDOM): void {
+    if (this.isInitialized) {
+      throw Reporter.error(1001); // TODO: create error code (already initialized, check isInitialized property and call destroy() if you want to assign a different dom)
+    }
+    const descriptors: PropertyDescriptorMap = {};
+    const protos: IDOM[] = [dom];
+    let proto = Object.getPrototypeOf(dom);
+    while (proto && proto !== Object.prototype) {
+      protos.unshift(proto);
+      proto = Object.getPrototypeOf(proto);
+    }
+    for (proto of protos) {
+      Object.assign(descriptors, Object.getOwnPropertyDescriptors(proto));
+    }
+    const keys: string[] = [];
+    let key: string;
+    let descriptor: PropertyDescriptor;
+    for (key in descriptors) {
+      descriptor = descriptors[key];
+      if (descriptor.configurable && descriptor.writable) {
+        Reflect.defineProperty(this, key, descriptor);
+        keys.push(key);
       }
-    } else {
-      template = DOM.createTemplate() as any;
-      template.innerHTML = <string>markupOrNode;
     }
-
-    // bind performs a bit better and gives a cleaner closure than an arrow function
-    return createNodeSequenceFromFragment.bind(null, template.content);
+    Reflect.set(this, '$domKeys', keys);
+    Reflect.set(this, '$initialized', true);
   },
-
-  createElement(name: string): INode {
-    return document.createElement(name);
-  },
-
-  createText(text: string): INode {
-    return document.createTextNode(text);
-  },
-
-  createNodeObserver(target: INode, callback: MutationCallback, options: MutationObserverInit) {
-    const observer = new MutationObserver(callback);
-    observer.observe(target as Node, options);
-    return observer;
-  },
-
-  attachShadow(host: INode, options: ShadowRootInit): INode {
-    return (host as Element).attachShadow(options);
-  },
-
-  /*@internal*/
-  createTemplate(): INode {
-    return document.createElement('template');
-  },
-
-  cloneNode(node: INode, deep?: boolean): INode {
-    return (<Node>node).cloneNode(deep !== false); // use true unless the caller explicitly passes in false
-  },
-
-  migrateChildNodes(currentParent: INode, newParent: INode): void {
-    const append = DOM.appendChild;
-    while (currentParent.firstChild) {
-      append(newParent, currentParent.firstChild);
+  destroy(): void {
+    if (!this.isInitialized) {
+      throw Reporter.error(1002); // TODO: create error code (already destroyed)
     }
-  },
-
-  isNodeInstance(potentialNode: any): potentialNode is INode {
-    return potentialNode instanceof Node;
-  },
-
-  isElementNodeType(node: INode): boolean {
-    return (<Node>node).nodeType === 1;
-  },
-
-  isTextNodeType(node: INode): boolean {
-    return (<Node>node).nodeType === 3;
-  },
-
-  remove(node: INodeLike): void {
-    // only check the prototype once and then permanently set a polyfilled or non-polyfilled call to save a few cycles
-    if (Element.prototype.remove === undefined) {
-      (DOM.remove = removePolyfilled)(<Element>node);
-    } else {
-      (DOM.remove = removeNormal)(<Element>node);
-    }
-  },
-
-  replaceNode(newChild: INode, oldChild: INode): void {
-    if (oldChild.parentNode) {
-      (<Node>oldChild.parentNode).replaceChild(<Node>newChild, <Node>oldChild);
-    }
-  },
-
-  appendChild(parent: INode, child: INode): void {
-    (<Node>parent).appendChild(<Node>child);
-  },
-
-  insertBefore(nodeToInsert: INode, referenceNode: INode): void {
-    (<Node>referenceNode.parentNode).insertBefore(<Node>nodeToInsert, <Node>referenceNode);
-  },
-
-  getAttribute(node: INode, name: string): any {
-    return (<Element>node).getAttribute(name);
-  },
-
-  setAttribute(node: INode, name: string, value: any): void {
-    (<Element>node).setAttribute(name, value);
-  },
-
-  removeAttribute(node: INode, name: string): void {
-    (<Element>node).removeAttribute(name);
-  },
-
-  hasClass(node: INode, className: string): boolean {
-    return (<Element>node).classList.contains(className);
-  },
-
-  addClass(node: INode, className: string): void {
-    (<Element>node).classList.add(className);
-  },
-
-  removeClass(node: INode, className: string): void {
-    (<Element>node).classList.remove(className);
-  },
-
-  addEventListener(eventName: string, subscriber: any, publisher?: INode, options?: any) {
-    (<Node>publisher || document).addEventListener(eventName, subscriber, options);
-  },
-
-  removeEventListener(eventName: string, subscriber: any, publisher?: INode, options?: any) {
-    (<Node>publisher || document).removeEventListener(eventName, subscriber, options);
-  },
-
-  isAllWhitespace(node: INode): boolean {
-    if ((<any>node).auInterpolationTarget === true) {
-      return false;
-    }
-    const text = (node as Node).textContent;
-    const len = text.length;
-    let i = 0;
-    // for perf benchmark of this compared to the regex method: http://jsben.ch/p70q2 (also a general case against using regex)
-    while (i < len) {
-      // charCodes 0-0x20(32) can all be considered whitespace (non-whitespace chars in this range don't have a visual representation anyway)
-      if (text.charCodeAt(i) > 0x20) {
-        return false;
-      }
-      i++;
-    }
-    return true;
-  },
-
-  treatAsNonWhitespace(node: INode): void {
-    // see isAllWhitespace above
-    (<any>node).auInterpolationTarget = true;
-  },
-
-  convertToRenderLocation(node: INode): IRenderLocation {
-    const location = document.createComment('au-loc');
-    // let this throw if node does not have a parent
-    (<Node>node.parentNode).replaceChild(location, <any>node);
-    return location;
-  },
-
-  registerElementResolver(container: IContainer, resolver: IResolver): void {
-    container.registerResolver(INode, resolver);
-    container.registerResolver(Element, resolver);
-    container.registerResolver(HTMLElement, resolver);
-    container.registerResolver(SVGElement, resolver);
+    const keys = Reflect.get(this, '$domKeys') as string[];
+    keys.forEach(key => {
+      Reflect.deleteProperty(this, key);
+    });
+    Object.assign(this, niDOM);
+    Reflect.set(this, '$domKeys', PLATFORM.emptyArray);
+    Reflect.set(this, '$initialized', false);
   }
 };
 
@@ -243,71 +176,25 @@ export const DOM = {
 // It's used in various places to avoid null and to encode
 // the explicit idea of "no view".
 const emptySequence: INodeSequence = {
-  firstChild: null,
-  lastChild: null,
+  isMounted: false,
+  isLinked: false,
+  next: void 0,
   childNodes: PLATFORM.emptyArray,
-  findTargets() { return PLATFORM.emptyArray; },
-  insertBefore(refNode: INode): void {},
-  appendTo(parent: INode): void {},
-  remove(): void {}
+  firstChild: null!,
+  lastChild: null!,
+  findTargets(): ArrayLike<INode> { return PLATFORM.emptyArray; },
+  insertBefore(refNode: INode): void { /* do nothing */ },
+  appendTo(parent: INode): void { /* do nothing */ },
+  remove(): void { /* do nothing */ },
+  addToLinked(): void { /* do nothing */ },
+  unlink(): void { /* do nothing */ },
+  link(next: INodeSequence | IRenderLocation | undefined): void { /* do nothing */ },
 };
 
 export const NodeSequence = {
   empty: emptySequence
 };
 
-// This is the most common form of INodeSequence.
-// Every custom element or template controller whose node sequence is based on an HTML template
-// has an instance of this under the hood. Anyone who wants to create a node sequence from
-// a string of markup would also receive an instance of this.
-// CompiledTemplates create instances of FragmentNodeSequence.
-/*@internal*/
-export class FragmentNodeSequence implements INodeSequence {
-  public firstChild: Node;
-  public lastChild: Node;
-  public childNodes: Node[];
-
-  private fragment: DocumentFragment;
-
-  constructor(fragment: DocumentFragment) {
-    this.fragment = fragment;
-    this.firstChild = fragment.firstChild;
-    this.lastChild = fragment.lastChild;
-    this.childNodes = PLATFORM.toArray(fragment.childNodes);
-  }
-
-  public findTargets(): ArrayLike<Node> {
-    return this.fragment.querySelectorAll('.au');
-  }
-
-  public insertBefore(refNode: Node): void {
-    refNode.parentNode.insertBefore(this.fragment, refNode);
-  }
-
-  public appendTo(parent: Node): void {
-    parent.appendChild(this.fragment);
-  }
-
-  public remove(): void {
-    const fragment = this.fragment;
-    let current = this.firstChild;
-
-    if (current.parentNode !== fragment) {
-      // this bind is a small perf tweak to minimize member accessors
-      const append = fragment.appendChild.bind(fragment);
-      const end = this.lastChild;
-      let next: Node;
-
-      while (current) {
-        next = current.nextSibling;
-        append(current);
-
-        if (current === end) {
-          break;
-        }
-
-        current = next;
-      }
-    }
-  }
+export interface INodeSequenceFactory<T extends INode = INode> {
+  createNodeSequence(): INodeSequence<T>;
 }

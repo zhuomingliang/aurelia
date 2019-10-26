@@ -67,7 +67,7 @@ define("view", [], function() {
 
           req(depsToLoad, function() {
             var templateSource = {
-              templateOrNode: description.template,
+              template: description.template,
               build: {
                 required: true,
                 compiler: "default"
@@ -82,7 +82,7 @@ define("view", [], function() {
     },
 
     write: function write(pluginName, moduleName, _write, config) {
-      if (buildMap.hasOwnProperty(moduleName)) {
+      if (Object.prototype.hasOwnProperty.call(buildMap, moduleName)) {
         var text = buildMap[moduleName];
         var description = createTemplateDescription(text);
         var depsToLoad = processImports(description.imports, moduleName);
@@ -101,7 +101,7 @@ define("view", [], function() {
               .join(",") +
             "], function() { \n          var templateSource = {\n            name: '" +
             kebabCase(templateImport.basename) +
-            "',\n            templateOrNode: '" +
+            "',\n            template: '" +
             view.escape(description.template) +
             "',\n            build: {\n              required: true,\n              compiler: 'default'\n            },\n            dependencies: Array.prototype.slice.call(arguments)\n          };\n\n          return { default: templateSource };\n        });\n"
         );
@@ -112,7 +112,7 @@ define("view", [], function() {
   function createTemplateDescription(template) {
     var imports = [];
     var cleanedTemplate = template.replace(
-      /^@import\s+\'([a-zA-z\/.\-_!%&\?=0-9]*)\'\s*;/gm,
+      /^@import\s+\'([a-zA-Z\/.\-_!%&\?=0-9]*)\'\s*;/gm,
       function(match, url) {
         imports.push(parseImport(url));
         return "";
@@ -120,7 +120,7 @@ define("view", [], function() {
     );
 
     return {
-      templateOrNode: cleanedTemplate.trim(),
+      template: cleanedTemplate.trim(),
       imports: imports
     };
   }

@@ -1,16 +1,25 @@
 {
   "compilerOptions": {
-    "allowJs": false,
-    "composite": true,
+    "pretty": true,
+    "lib": ["esnext"],
+    "target": "es2018",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "experimentalDecorators": true,
+    "rootDir": ".",
+
     "declaration": true,
     "declarationMap": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "lib": ["esnext", "dom"],
-    "module": "umd",
-    "moduleResolution": "node",
     "sourceMap": true,
+    "composite": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "preserveConstEnums": true,
     "stripInternal": true,
-    "target": "es2018"
+
+    "strict": true,
+
+    "types": []
   }
 }

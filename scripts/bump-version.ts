@@ -1,68 +1,63 @@
-import project from './project';
-import { loadPackageJson, savePackageJson, loadPackageLockJson, savePackageLockJson } from './package.json';
-import { createLogger, c } from './logger';
 import { readFileSync, writeFileSync } from 'fs';
+import { c, createLogger } from './logger';
+import { loadPackageJson, savePackageJson } from './package.json';
+import project from './project';
+import { getGitLog } from './git';
+import { getCurrentVersion, getNewVersion } from './get-version-info';
 
 const log = createLogger('bump-version');
 
-export function getCurrentVersion() {
-  const versionRegExp = /(\d+)\.(\d+)\.(\d+)($|\-)/;
-  const match = project.lerna.version.match(versionRegExp);
-  if (match === null) {
-    throw new Error( `lerna.json 'version' should match ${versionRegExp}`);
-  }
-  const major = match[1];
-  const minor = match[2];
-  const patch = match[3];
-  log(`${c.cyan('current version')} ${major}.${minor}.${patch}`);
-  return { major, minor, patch };
-}
-
-export async function updateDependencyVersions(newVersion: string) {
-  const aureliaRegExp = /^@aurelia/
-  for (const { name, scopedName } of project.packages) {
-    log(`updating dependencies for ${c.magentaBright(scopedName)}`);
-    const pkg = await loadPackageJson('packages', name);
-    const pkgLock = await loadPackageLockJson('packages', name);
-    pkg.version = pkgLock.version = newVersion;
+export async function updateDependencyVersions(newVersion: string): Promise<void> {
+  for (const { name } of project.packages) {
+    log(`updating dependencies for ${c.magentaBright(name.npm)}`);
+    const pkg = await loadPackageJson('packages', name.kebab);
+    pkg.version = newVersion;
     if ('dependencies' in pkg) {
       const deps = pkg.dependencies;
       for (const depName in deps) {
-        if (aureliaRegExp.test(depName)) {
-          log(`  dep ${scopedName} ${c.yellow(deps[depName])} -> ${c.greenBright(newVersion)}`);
+        if (depName.startsWith("@aurelia")) {
+          log(`  dep ${name.npm} ${c.yellow(deps[depName])} -> ${c.greenBright(newVersion)}`);
           deps[depName] = newVersion;
         }
       }
     }
-    await savePackageJson(pkg, 'packages', name);
-    await savePackageLockJson(pkgLock, 'packages', name);
+    await savePackageJson(pkg, 'packages', name.kebab);
   }
-  const lernaJson = JSON.parse(readFileSync(project["lerna.json"].path, { encoding: 'utf8' }));
+  const lernaJson = JSON.parse(readFileSync(project['lerna.json'].path, { encoding: 'utf8' }));
   lernaJson.version = newVersion;
-  writeFileSync(project["lerna.json"].path, JSON.stringify(lernaJson, null, 2), { encoding: 'utf8' });
+  writeFileSync(project['lerna.json'].path, `${JSON.stringify(lernaJson, null, 2)}\n`, { encoding: 'utf8' });
 }
 
-export function getDate(sep?: string): string {
-  const s = sep === undefined ? '' : sep;
-  const raw = new Date().toISOString().replace(/:|T|\.|-/g, '').slice(0, 8);
-  const y = raw.slice(0, 4);
-  const m = raw.slice(4, 6);
-  const d = raw.slice(6, 8);
-  return `${y}${s}${m}${s}${d}`;
-}
-
-export function getNewVersion(major: string | number, minor: string | number, patch: string | number, tag: string): string {
-  let newVersion: string;
-  switch (tag) {
-    case 'dev':
-      newVersion = `${major}.${minor}.${patch}-${tag}.${getDate()}`;
-      break;
-    case 'latest':
-      newVersion = `${major}.${minor}.${patch}`;
-      break;
-    default:
-      throw new Error(`Invalid tag "${tag}"`);
+export async function getRecommendedVersionBump(): Promise<'minor' | 'patch'> {
+  const gitLog = await getGitLog(`v${project.lerna.version}`, 'HEAD', project.path);
+  const lines = gitLog.split('\n');
+  if (lines.some(line => /feat(\([^)]+\))?:/.test(line))) {
+    return 'minor';
+  } else {
+    return 'patch';
   }
-  log(`${c.cyan('new version')} ${newVersion}`);
-  return newVersion;
 }
+
+function parseArgs(): {tag: string; suffix: string} {
+  const args = process.argv.slice(2);
+  const tag = args[0];
+  const suffix = args[1] || '';
+  log(args.join(' '));
+  return { tag, suffix };
+}
+
+(async function (): Promise<void> {
+  const { tag, suffix } = parseArgs();
+  if (Boolean(tag)) {
+    const { major, minor, patch } = getCurrentVersion();
+    const bump = await getRecommendedVersionBump();
+    const newVersion = getNewVersion(major, minor, patch, tag, bump, suffix);
+    if (tag === 'dev') {
+      await updateDependencyVersions(newVersion);
+    }
+    log('Done.');
+  }
+})().catch(err => {
+  log.error(err);
+  process.exit(1);
+});
