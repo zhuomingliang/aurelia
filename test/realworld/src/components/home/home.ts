@@ -1,9 +1,10 @@
 import { inject } from '@aurelia/kernel';
 import { IRouter, NavRoute } from '@aurelia/router';
+
 import { Article } from 'models/article';
 import { ArticleRequest } from 'models/article-request';
 import { getPages } from 'shared/get-pages';
-import { ArticleService } from "shared/services/article-service";
+import { ArticleService } from 'shared/services/article-service';
 import { TagService } from 'shared/services/tag-service';
 import { SharedState } from 'shared/state/shared-state';
 
@@ -22,11 +23,12 @@ export class Home {
     private readonly sharedState: SharedState,
     private readonly router: IRouter,
     private readonly articleService: ArticleService,
-    private readonly tagService: TagService) { }
+    private readonly tagService: TagService,
+  ) {}
 
   public attached() {
-    this.getArticles();
-    this.getTags();
+    this.getArticles().catch((error: Error) => { throw error; });
+    this.getTags().catch((error: Error) => { throw error; });
     this.setupNav();
   }
 
@@ -65,7 +67,8 @@ export class Home {
           title: 'Global Feed',
           consideredActive: () => this.shownList === 'all' && !this.filterTag,
         },
-      ], {
+      ],
+      {
         ul: 'nav nav-pills outline-active',
         li: 'nav-item',
         a: 'nav-link',
@@ -78,7 +81,7 @@ export class Home {
     if (type === 'feed' && !this.sharedState.isAuthenticated) { return; }
     this.shownList = type;
     this.filterTag = tag;
-    this.getArticles();
+    this.getArticles().catch((error: Error) => { throw error; });
   }
 
   public getFeedLinkClass() {
@@ -94,6 +97,6 @@ export class Home {
 
   public setPageTo(pageNumber: number) {
     this.currentPage = pageNumber;
-    this.getArticles();
+    this.getArticles().catch((error: Error) => { throw error; });
   }
 }

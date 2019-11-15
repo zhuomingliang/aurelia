@@ -2,7 +2,8 @@ import {
   bindable,
   alias,
   customAttribute,
-  INode
+  INode,
+  CustomAttribute
 } from '@aurelia/runtime';
 import { assert, setup } from '@aurelia/testing';
 
@@ -15,7 +16,9 @@ describe('custom-attributes', function () {
     class Fooatt5 {
       @bindable({ primary: true })
       public value: any;
-      public constructor(@INode private readonly element: Element) {
+      private readonly element: Element;
+      public constructor(@INode element: INode) {
+        this.element = element as Element;
       }
 
       public bound() {
@@ -28,7 +31,9 @@ describe('custom-attributes', function () {
     class Fooatt4 {
       @bindable({ primary: true })
       public value: any;
-      public constructor(@INode private readonly element: Element) {
+      private readonly element: Element;
+      public constructor(@INode element: INode) {
+        this.element = element as Element;
       }
 
       public bound() {
@@ -42,7 +47,9 @@ describe('custom-attributes', function () {
     class FooMultipleAlias {
       @bindable({ primary: true })
       public value: any;
-      public constructor(@INode private readonly element: Element) {
+      private readonly element: Element;
+      public constructor(@INode element: INode) {
+        this.element = element as Element;
       }
 
       public bound() {
@@ -127,7 +134,7 @@ describe('custom-attributes', function () {
 
   });
 
-  describe('with multiple bindings', function () {
+  describe('0.2 Multiple bindings', function () {
 
     @customAttribute('multi')
     class Multi {
@@ -135,7 +142,9 @@ describe('custom-attributes', function () {
         @bindable public b: string;
         public aResult: boolean;
         public bResult: string;
-        public constructor(@INode private readonly element: Element) {
+        private readonly element: Element;
+        public constructor(@INode element: INode) {
+          this.element = element as Element;
           this.element.innerHTML = 'Created';
         }
         public bound() {
@@ -160,7 +169,9 @@ describe('custom-attributes', function () {
         @bindable({ primary: true }) public b: string;
         public aResult: boolean;
         public bResult: string;
-        public constructor(@INode private readonly element: Element) {
+        private readonly element: Element;
+        public constructor(@INode element: INode) {
+          this.element = element as Element;
           this.element.innerHTML = 'Created';
         }
         public bound() {
@@ -201,4 +212,63 @@ describe('custom-attributes', function () {
     });
   });
 
+  describe('03. Change Handler', function () {
+    interface IChangeHandlerTestViewModel {
+      prop: any;
+      propChangedCallCount: number;
+      propChanged(newValue: any): void;
+    }
+
+    @customAttribute('foo')
+    class Foo implements IChangeHandlerTestViewModel {
+      @bindable()
+      public prop: any;
+      public propChangedCallCount: number = 0;
+      public propChanged(): void {
+        this.propChangedCallCount++;
+      }
+    }
+
+    it('does not invoke change handler when starts with plain usage', function () {
+      const { fooVm, tearDown } = setupChangeHandlerTest('<div foo="prop"></div>');
+      assert.strictEqual(fooVm.propChangedCallCount, 0);
+      fooVm.prop = '5';
+      assert.strictEqual(fooVm.propChangedCallCount, 1);
+      tearDown();
+    });
+
+    it('does not invoke chane handler when starts with commands', function () {
+      const { fooVm, tearDown } = setupChangeHandlerTest('<div foo.bind="prop"></foo>');
+      assert.strictEqual(fooVm.propChangedCallCount, 0);
+      fooVm.prop = '5';
+      assert.strictEqual(fooVm.propChangedCallCount, 1);
+      tearDown();
+    });
+
+    it('does not invoke chane handler when starts with interpolation', function () {
+      const { fooVm, tearDown } = setupChangeHandlerTest(`<div foo="\${prop}"></foo>`);
+      assert.strictEqual(fooVm.propChangedCallCount, 0);
+      fooVm.prop = '5';
+      assert.strictEqual(fooVm.propChangedCallCount, 1);
+      tearDown();
+    });
+
+    it('does not invoke chane handler when starts with two way binding', function () {
+      const { fooVm, tearDown } = setupChangeHandlerTest(`<div foo.two-way="prop"></foo>`);
+      assert.strictEqual(fooVm.propChangedCallCount, 0);
+      fooVm.prop = '5';
+      assert.strictEqual(fooVm.propChangedCallCount, 1);
+      tearDown();
+    });
+
+    function setupChangeHandlerTest(template: string) {
+      const options = setup(template, class {}, [Foo]);
+      const fooEl = options.appHost.querySelector('div') as INode;
+      const fooVm = CustomAttribute.for(fooEl, 'foo').viewModel as Foo;
+      return {
+        fooVm: fooVm,
+        tearDown: () => options.au.stop()
+      };
+    }
+  });
 });

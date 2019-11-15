@@ -14,10 +14,11 @@ async function main() {
     '../index.html',
     dots.index({
       frameworks
-    }), {
+    }),
+    {
       encoding: 'utf8'
     }
   );
 }
 
-main();
+main().catch((error: Error) => { throw error; });

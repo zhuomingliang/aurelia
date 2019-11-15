@@ -65,6 +65,21 @@ export {
   Metadata,
 } from './metadata';
 export {
+  IConsoleLike,
+  ColorOptions,
+  ILogConfig,
+  ILogEvent,
+  ILogEventFactory,
+  ISink,
+  ILogger,
+  LogConfig,
+  DefaultLogEvent,
+  DefaultLogEventFactory,
+  DefaultLogger,
+  ConsoleSink,
+  LoggerConfiguration,
+} from './logger';
+export {
   relativeToFile,
   join,
   buildQueryString,
@@ -117,4 +132,7 @@ export {
   mergeObjects,
   firstDefined,
   getPrototypeChain,
+  isObject,
+  isNullOrUndefined,
+  isNativeFunction,
 } from './functions';

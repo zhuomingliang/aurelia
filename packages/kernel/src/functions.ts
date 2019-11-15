@@ -1,5 +1,5 @@
 import { PLATFORM } from './platform';
-import { Constructable } from './interfaces';
+import { Constructable, Overwrite } from './interfaces';
 
 const isNumericLookup: Record<string, boolean> = {};
 
@@ -83,7 +83,7 @@ const baseCase = (function () {
   }
 
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-  const isDigit = Object.freeze(Object.assign(Object.create(null) as {}, {
+  const isDigit = Object.assign(Object.create(null) as {}, {
     '0': true,
     '1': true,
     '2': true,
@@ -94,7 +94,7 @@ const baseCase = (function () {
     '7': true,
     '8': true,
     '9': true,
-  } as Record<string, true | undefined>));
+  } as Record<string, true | undefined>);
 
   function charToKind(char: string): CharKind {
     if (char === '') {
@@ -420,7 +420,7 @@ export const getPrototypeChain = (function () {
   let i = 0;
   let chain: [Constructable, ...Constructable[]] | undefined = void 0;
 
-  return function <T extends Constructable>(Type: T): readonly [T, ...Constructable[]] {
+  return function <T extends Constructable> (Type: T): readonly [T, ...Constructable[]] {
     chain = cache.get(Type);
     if (chain === void 0) {
       cache.set(Type, chain = [proto = Type]);
@@ -430,5 +430,172 @@ export const getPrototypeChain = (function () {
       }
     }
     return chain as [T, ...Constructable[]];
+  };
+})();
+
+export function toLookup<
+  T1 extends {},
+>(
+  obj1: T1,
+): T1;
+export function toLookup<
+  T1 extends {},
+  T2 extends {},
+>(
+  obj1: T1,
+  obj2: T2,
+): Overwrite<T1, T2>;
+export function toLookup<
+  T1 extends {},
+  T2 extends {},
+  T3 extends {},
+>(
+  obj1: T1,
+  obj2: T2,
+  obj3: T3,
+): Overwrite<T1, Overwrite<T1, T2>>;
+export function toLookup<
+  T1 extends {},
+  T2 extends {},
+  T3 extends {},
+  T4 extends {},
+>(
+  obj1: T1,
+  obj2: T2,
+  obj3: T3,
+  obj4: T4,
+): Readonly<T1 & T2 & T3 & T4>;
+export function toLookup<
+  T1 extends {},
+  T2 extends {},
+  T3 extends {},
+  T4 extends {},
+  T5 extends {},
+>(
+  obj1: T1,
+  obj2: T2,
+  obj3: T3,
+  obj4: T4,
+  obj5: T5,
+): Readonly<T1 & T2 & T3 & T4 & T5>;
+export function toLookup(...objs: {}[]): Readonly<{}> {
+  return Object.assign(Object.create(null) as {}, ...objs);
+}
+
+/**
+ * Determine whether a value is an object.
+ *
+ * Uses `typeof` to guarantee this works cross-realm, which is where `instanceof Object` might fail.
+ *
+ * Some environments where these issues are known to arise:
+ * - same-origin iframes (accessing the other realm via `window.top`)
+ * - `jest`.
+ *
+ * The exact test is:
+ * ```ts
+ * typeof value === 'object' && value !== null || typeof value === 'function'
+ * ```
+ *
+ * @param value - The value to test.
+ * @returns `true` if the value is an object, otherwise `false`.
+ * Also performs a type assertion that defaults to `value is Object | Function` which, if the input type is a union with an object type, will infer the correct type.
+ * This can be overridden with the generic type argument.
+ *
+ * @example
+ *
+ * ```ts
+ * class Foo {
+ *   bar = 42;
+ * }
+ *
+ * function doStuff(input?: Foo | null) {
+ *   input.bar; // Object is possibly 'null' or 'undefined'
+ *
+ *   // input has an object type in its union (Foo) so that type will be extracted for the 'true' condition
+ *   if (isObject(input)) {
+ *     input.bar; // OK (input is now typed as Foo)
+ *   }
+ * }
+ *
+ * function doOtherStuff(input: unknown) {
+ *   input.bar; // Object is of type 'unknown'
+ *
+ *   // input is 'unknown' so there is no union type to match and it will default to 'Object | Function'
+ *   if (isObject(input)) {
+ *     input.bar; // Property 'bar' does not exist on type 'Object | Function'
+ *   }
+ *
+ *   // if we know for sure that, if input is an object, it must be a specific type, we can explicitly tell the function to assert that for us
+ *   if (isObject<Foo>(input)) {
+ *    input.bar; // OK (input is now typed as Foo)
+ *   }
+ * }
+ * ```
+ */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function isObject<T extends object = Object | Function>(value: unknown): value is T {
+  return typeof value === 'object' && value !== null || typeof value === 'function';
+}
+
+/**
+ * Determine whether a value is `null` or `undefined`.
+ *
+ * @param value - The value to test.
+ * @returns `true` if the value is `null` or `undefined`, otherwise `false`.
+ * Also performs a type assertion that ensures TypeScript treats the value appropriately in the `if` and `else` branches after this check.
+ */
+export function isNullOrUndefined(value: unknown): value is null | undefined {
+  return value === null || value === void 0;
+}
+
+/**
+ * Determine whether the value is a native function.
+ *
+ * @param fn - The function to check.
+ * @returns `true` is the function is a native function, otherwise `false`
+ */
+export const isNativeFunction = (function () {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  const lookup: WeakMap<Function, boolean> = new WeakMap();
+
+  let isNative = false as boolean | undefined;
+  let sourceText = '';
+  let i = 0;
+
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  return function (fn: Function) {
+    isNative = lookup.get(fn);
+    if (isNative === void 0) {
+      sourceText = fn.toString();
+      i = sourceText.length;
+
+      // http://www.ecma-international.org/ecma-262/#prod-NativeFunction
+      isNative = (
+        // 29 is the length of 'function () { [native code] }' which is the smallest length of a native function string
+        i >= 29 &&
+        // 100 seems to be a safe upper bound of the max length of a native function. In Chrome and FF it's 56, in Edge it's 61.
+        i <= 100 &&
+        // This whole heuristic *could* be tricked by a comment. Do we need to care about that?
+        sourceText.charCodeAt(i -  1) === 0x7D && // }
+        // TODO: the spec is a little vague about the precise constraints, so we do need to test this across various browsers to make sure just one whitespace is a safe assumption.
+        sourceText.charCodeAt(i -  2)  <= 0x20 && // whitespace
+        sourceText.charCodeAt(i -  3) === 0x5D && // ]
+        sourceText.charCodeAt(i -  4) === 0x65 && // e
+        sourceText.charCodeAt(i -  5) === 0x64 && // d
+        sourceText.charCodeAt(i -  6) === 0x6F && // o
+        sourceText.charCodeAt(i -  7) === 0x63 && // c
+        sourceText.charCodeAt(i -  8) === 0x20 && //
+        sourceText.charCodeAt(i -  9) === 0x65 && // e
+        sourceText.charCodeAt(i - 10) === 0x76 && // v
+        sourceText.charCodeAt(i - 11) === 0x69 && // i
+        sourceText.charCodeAt(i - 12) === 0x74 && // t
+        sourceText.charCodeAt(i - 13) === 0x61 && // a
+        sourceText.charCodeAt(i - 14) === 0x6E && // n
+        sourceText.charCodeAt(i - 15) === 0x58    // [
+      );
+
+      lookup.set(fn, isNative);
+    }
+    return isNative;
   };
 })();

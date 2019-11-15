@@ -4,7 +4,8 @@ import {
   PLATFORM,
   Registration,
   Reporter,
-  toArray
+  toArray,
+  Metadata
 } from '@aurelia/kernel';
 import {
   CustomElementHost,
@@ -13,11 +14,10 @@ import {
   IElementProjector,
   INodeSequence,
   IProjectorLocator,
-  CustomElementDefinition
+  CustomElementDefinition,
+  CustomElement
 } from '@aurelia/runtime';
 import { IShadowDOMStyles, IShadowDOMGlobalStyles } from './styles/shadow-dom-styles';
-
-const slice = Array.prototype.slice;
 
 const defaultShadowOptions = {
   mode: 'open' as 'open' | 'closed'
@@ -49,17 +49,15 @@ const childObserverOptions = { childList: true };
 
 /** @internal */
 export class ShadowDOMProjector implements IElementProjector<Node> {
-  public host: CustomElementHost<Node>;
   public shadowRoot: CustomElementHost<ShadowRoot>;
-  public dom: IDOM<Node>;
-  // eslint-disable-next-line @typescript-eslint/prefer-readonly
-  private $controller: IController<Node>;
 
-  public constructor(dom: IDOM<Node>, $controller: IController<Node>, host: CustomElementHost<HTMLElement>, definition: CustomElementDefinition) {
-    this.dom = dom;
-    this.host = host;
-    this.$controller = $controller;
-
+  public constructor(
+    public dom: IDOM<Node>,
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly
+    private $controller: IController<Node>,
+    public host: CustomElementHost<HTMLElement>,
+    definition: CustomElementDefinition,
+  ) {
     let shadowOptions: ShadowRootInit;
     if (
       definition.shadowOptions instanceof Object &&
@@ -70,8 +68,8 @@ export class ShadowDOMProjector implements IElementProjector<Node> {
       shadowOptions = defaultShadowOptions;
     }
     this.shadowRoot = host.attachShadow(shadowOptions);
-    this.host.$controller = $controller;
-    this.shadowRoot.$controller = $controller as IController<ShadowRoot>;
+    Metadata.define(CustomElement.name, $controller, this.host);
+    Metadata.define(CustomElement.name, $controller, this.shadowRoot);
   }
 
   public get children(): ArrayLike<CustomElementHost<Node>> {
@@ -109,7 +107,11 @@ export class ContainerlessProjector implements IElementProjector<Node> {
 
   private readonly childNodes: readonly CustomElementHost<Node>[];
 
-  public constructor(dom: IDOM<Node>, $controller: IController<Node>, host: Node) {
+  public constructor(
+    dom: IDOM<Node>,
+    $controller: IController<Node>,
+    host: Node,
+  ) {
     if (host.childNodes.length) {
       this.childNodes = toArray(host.childNodes);
     } else {
@@ -117,7 +119,7 @@ export class ContainerlessProjector implements IElementProjector<Node> {
     }
 
     this.host = dom.convertToRenderLocation(host) as CustomElementHost<Node>;
-    this.host.$controller = $controller;
+    Metadata.define(CustomElement.name, $controller, this.host);
   }
 
   public get children(): ArrayLike<CustomElementHost<Node>> {
@@ -145,11 +147,11 @@ export class ContainerlessProjector implements IElementProjector<Node> {
 
 /** @internal */
 export class HostProjector implements IElementProjector<Node> {
-  public host: CustomElementHost<Node>;
-
-  public constructor($controller: IController<Node>, host: CustomElementHost<Node>) {
-    this.host = host;
-    this.host.$controller = $controller;
+  public constructor(
+    $controller: IController<Node>,
+    public host: CustomElementHost<Node>,
+  ) {
+    Metadata.define(CustomElement.name, $controller, host);
   }
 
   public get children(): ArrayLike<CustomElementHost<Node>> {

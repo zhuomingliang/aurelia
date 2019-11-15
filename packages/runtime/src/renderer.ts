@@ -4,10 +4,10 @@ import {
   IContainer,
   IRegistry,
   IResolver,
-  Key,
   Registration,
   Reporter,
   Metadata,
+  IIndexable,
 } from '@aurelia/kernel';
 import { AnyBindingExpression } from './ast';
 import { CallBinding } from './binding/call-binding';
@@ -51,11 +51,12 @@ import {
   CustomAttribute,
 } from './resources/custom-attribute';
 import {
-  CustomElement, CustomElementHost, CustomElementDefinition,
+  CustomElement, CustomElementDefinition,
 } from './resources/custom-element';
 import {
   Controller,
 } from './templating/controller';
+import { ObserversLookup } from './observation';
 
 type DecoratableInstructionRenderer<TType extends string, TProto, TClass> = Class<TProto & Partial<IInstructionTypeClassifier<TType> & Pick<IInstructionRenderer, 'render'>>, TClass> & Partial<IRegistry>;
 type DecoratedInstructionRenderer<TType extends string, TProto, TClass> =  Class<TProto & IInstructionTypeClassifier<TType> & Pick<IInstructionRenderer, 'render'>, TClass> & IRegistry;
@@ -65,7 +66,7 @@ type InstructionRendererDecorator<TType extends string> = <TProto, TClass>(targe
 export function instructionRenderer<TType extends string>(instructionType: TType): InstructionRendererDecorator<TType> {
   return function decorator<TProto, TClass>(target: DecoratableInstructionRenderer<TType, TProto, TClass>): DecoratedInstructionRenderer<TType, TProto, TClass> {
     // wrap the constructor to set the instructionType to the instance (for better performance than when set on the prototype)
-    const decoratedTarget = function(...args: unknown[]): TProto {
+    const decoratedTarget = function (...args: unknown[]): TProto {
       const instance = new target(...args);
       instance.instructionType = instructionType;
       return instance;
@@ -91,11 +92,11 @@ export function instructionRenderer<TType extends string>(instructionType: TType
 
 /* @internal */
 export class Renderer implements IRenderer {
-  public static readonly inject: readonly Key[] = [all(IInstructionRenderer)];
-
   public instructionRenderers: Record<InstructionTypeName, IInstructionRenderer['render']>;
 
-  public constructor(instructionRenderers: IInstructionRenderer[]) {
+  public constructor(
+    @all(IInstructionRenderer) instructionRenderers: IInstructionRenderer[],
+  ) {
     const record: Record<InstructionTypeName, IInstructionRenderer['render']> = this.instructionRenderers = {};
     instructionRenderers.forEach(item => {
       // Binding the functions to the renderer instances and calling the functions directly,
@@ -187,45 +188,28 @@ export function getRefTarget(refHost: INode, refTargetName: string): object {
   if (refTargetName === 'element') {
     return refHost;
   }
-  const $auRefs = refHost.$au;
-  if ($auRefs === void 0) {
-    // todo: code error code, this message is from v1
-    throw new Error(`No Aurelia APIs are defined for the element: "${(refHost as { tagName: string }).tagName}".`);
-  }
-  let refTargetController: IController;
   switch (refTargetName) {
     case 'controller':
       // this means it supports returning undefined
-      return (refHost as CustomElementHost<INode>).$controller as IController;
+      return CustomElement.for(refHost)!;
     case 'view':
       // todo: returns node sequences for fun?
       throw new Error('Not supported API');
     case 'view-model':
       // this means it supports returning undefined
-      return ((refHost as CustomElementHost<INode>).$controller as IController).viewModel!;
-    default:
-      refTargetController = $auRefs[refTargetName];
-      if (refTargetController === void 0) {
+      return CustomElement.for(refHost)!.viewModel!;
+    default: {
+      const caController = CustomAttribute.for(refHost, refTargetName);
+      if (caController !== void 0) {
+        return caController.viewModel!;
+      }
+      const ceController = CustomElement.for(refHost, refTargetName);
+      if (ceController === void 0) {
         throw new Error(`Attempted to reference "${refTargetName}", but it was not found amongst the target's API.`);
       }
-      return refTargetController.viewModel!;
+      return ceController.viewModel!;
+    }
   }
-}
-
-function setControllerReference<T extends INode = INode>(
-  controller: Controller<T>,
-  host: T,
-  referenceName: string
-): void {
-  let $auRefs = host.$au;
-  if ($auRefs === void 0) {
-    $auRefs = host.$au = new ControllersLookup<T>();
-  }
-  $auRefs[referenceName] = controller;
-}
-
-class ControllersLookup<T extends INode> {
-  [key: string]: IController<T>;
 }
 
 @instructionRenderer(TargetedInstructionType.setProperty)
@@ -239,7 +223,12 @@ export class SetPropertyRenderer implements IInstructionRenderer {
     target: IController,
     instruction: ISetPropertyInstruction,
   ): void {
-    getTarget(target)[instruction.to as keyof object] = (instruction.value === '' ? true : instruction.value) as never; // Yeah, yeah..
+    const obj = getTarget(target) as IIndexable & { $observers: ObserversLookup };
+    if (obj.$observers !== void 0 && obj.$observers[instruction.to] !== void 0) {
+      obj.$observers[instruction.to].setValue(instruction.value, LifecycleFlags.fromBind);
+    } else {
+      obj[instruction.to] = instruction.value;
+    }
   }
 }
 
@@ -255,7 +244,8 @@ export class CustomElementRenderer implements IInstructionRenderer {
     instruction: IHydrateElementInstruction,
   ): void {
     const operation = context.beginComponentOperation(renderable, target, instruction, null, null!, target, true);
-    const component = context.get<object>(CustomElement.keyFrom(instruction.res));
+    const key = CustomElement.keyFrom(instruction.res);
+    const component = context.get<object>(key);
     const instructionRenderers = context.get(IRenderer).instructionRenderers;
     const childInstructions = instruction.instructions;
 
@@ -267,7 +257,7 @@ export class CustomElementRenderer implements IInstructionRenderer {
       instruction,
     );
 
-    setControllerReference(controller, controller.host!, instruction.res);
+    Metadata.define(key, controller, target);
 
     let current: ITargetedInstruction;
     for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
@@ -293,17 +283,13 @@ export class CustomAttributeRenderer implements IInstructionRenderer {
     instruction: IHydrateAttributeInstruction,
   ): void {
     const operation = context.beginComponentOperation(renderable, target, instruction);
-    const component = context.get<object>(CustomAttribute.keyFrom(instruction.res));
+    const key = CustomAttribute.keyFrom(instruction.res);
+    const component = context.get<object>(key);
     const instructionRenderers = context.get(IRenderer).instructionRenderers;
     const childInstructions = instruction.instructions;
 
-    const controller = Controller.forCustomAttribute(
-      component,
-      context,
-      flags,
-    );
-
-    setControllerReference(controller, target, instruction.res);
+    const controller = Controller.forCustomAttribute(component, context, flags);
+    Metadata.define(key, controller, target);
 
     let current: ITargetedInstruction;
     for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
@@ -337,7 +323,8 @@ export class TemplateControllerRenderer implements IInstructionRenderer {
     const factory = this.renderingEngine.getViewFactory(dom, instruction.def, context);
     const renderLocation = dom.convertToRenderLocation(target);
     const operation = context.beginComponentOperation(renderable, target, instruction, factory, parts, renderLocation, false);
-    const component = context.get<object>(CustomAttribute.keyFrom(instruction.res));
+    const key = CustomAttribute.keyFrom(instruction.res);
+    const component = context.get<object>(key);
     const instructionRenderers = context.get(IRenderer).instructionRenderers;
     const childInstructions = instruction.instructions;
     if (instruction.parts !== void 0) {
@@ -355,13 +342,12 @@ export class TemplateControllerRenderer implements IInstructionRenderer {
     }
 
     const controller = Controller.forCustomAttribute(component, context, flags);
+    Metadata.define(key, controller, renderLocation);
 
     if (instruction.link) {
       const controllers = renderable.controllers!;
       (component as { link(componentTail: IController): void}).link(controllers[controllers.length - 1]);
     }
-
-    setControllerReference(controller, renderLocation, instruction.res);
 
     let current: ITargetedInstruction;
     for (let i = 0, ii = childInstructions.length; i < ii; ++i) {

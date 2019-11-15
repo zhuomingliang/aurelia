@@ -1,8 +1,9 @@
-import { PLATFORM, Constructable } from '@aurelia/kernel';
-import { Aurelia, CustomElement, ILifecycle, LifecycleFlags, IScheduler } from '@aurelia/runtime';
-import { IEventManager } from '@aurelia/runtime-html';
 import { JitHtmlConfiguration } from '@aurelia/jit-html';
-import { TestContext, eachCartesianJoin, assert } from '@aurelia/testing';
+import { Constructable, PLATFORM } from '@aurelia/kernel';
+import { Aurelia, CustomElement, IScheduler } from '@aurelia/runtime';
+import { IEventManager } from '@aurelia/runtime-html';
+import { assert, eachCartesianJoin, TestContext } from '@aurelia/testing';
+import { StyleAttributePattern } from './attribute-pattern';
 
 // Remove certain defaults/fallbacks which are added by certain browsers to allow the assertion to pass
 function getNormalizedStyle(el: HTMLElement, ruleName: string): string {
@@ -17,7 +18,7 @@ function getNormalizedStyle(el: HTMLElement, ruleName: string): string {
 }
 
 // TemplateCompiler - Binding Commands integration
-describe('template-compiler.binding-commands.style', function() {
+describe('template-compiler.binding-commands.style', function () {
 
   /** [ruleName, ruleValue, defaultValue, isInvalid, valueOnInvalid] */
   const rulesTests: [string, string, string, boolean?, string?][] = [
@@ -141,12 +142,13 @@ describe('template-compiler.binding-commands.style', function() {
   eachCartesianJoin(
     [rulesTests, testCases],
     ([ruleName, ruleValue, ruleDefaultValue, isInvalid, valueOnInvalid], testCase, callIndex) => {
-      it(testCase.title(ruleName, ruleValue, callIndex), async function() {
+      it(testCase.title(ruleName, ruleValue, callIndex), async function () {
         const { ctx, au, scheduler, host, component, tearDown } = setup(
           testCase.template(ruleName),
           class App {
             public value: string = ruleValue;
           },
+          StyleAttributePattern,
           JitHtmlConfiguration,
           CustomElement.define(
             {

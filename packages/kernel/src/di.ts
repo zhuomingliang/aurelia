@@ -5,7 +5,7 @@ import { PLATFORM } from './platform';
 import { Reporter } from './reporter';
 import { ResourceType, Protocol } from './resource';
 import { Metadata } from './metadata';
-import { isNumeric } from './functions';
+import { isNumeric, isNativeFunction } from './functions';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -210,7 +210,7 @@ export class DI {
   }
 
   public static createInterface<K extends Key>(friendlyName?: string): IDefaultableInterfaceSymbol<K> {
-    const Interface: InternalDefaultableInterfaceSymbol<K> = function(target: Injectable<K>, property: string, index: number): any {
+    const Interface: InternalDefaultableInterfaceSymbol<K> = function (target: Injectable<K>, property: string, index: number): any {
       if (target == null) {
         throw Reporter.error(16, Interface.friendlyName, Interface); // TODO: add error (trying to resolve an InterfaceSymbol that has no registrations)
       }
@@ -224,12 +224,12 @@ export class DI {
       return Interface;
     };
 
-    Interface.withDefault = function(configure: (builder: IResolverBuilder<K>) => IResolver<K>): InterfaceSymbol<K> {
+    Interface.withDefault = function (configure: (builder: IResolverBuilder<K>) => IResolver<K>): InterfaceSymbol<K> {
       Interface.withDefault = function (): InterfaceSymbol<K> {
         throw Reporter.error(17, Interface);
       };
 
-      Interface.register = function(container: IContainer, key?: Key): IResolver<K> {
+      Interface.register = function (container: IContainer, key?: Key): IResolver<K> {
         const trueKey = key == null ? Interface : key;
         return configure({
           instance(value: K): IResolver<K> {
@@ -257,7 +257,7 @@ export class DI {
   }
 
   public static inject(...dependencies: Key[]): (target: Injectable, key?: string | number, descriptor?: PropertyDescriptor | number) => void {
-    return function(target: Injectable, key?: string | number, descriptor?: PropertyDescriptor | number): void {
+    return function (target: Injectable, key?: string | number, descriptor?: PropertyDescriptor | number): void {
       if (typeof descriptor === 'number') { // It's a parameter decorator.
         const annotationParamtypes = DI.getOrCreateAnnotationParamTypes(target);
         const dep = dependencies[0];
@@ -354,7 +354,7 @@ function createResolver(getter: (key: any, handler: IContainer, requestor: ICont
       DI.inject(resolver)(target, property, descriptor);
     };
 
-    resolver.resolve = function(handler: IContainer, requestor: IContainer): any {
+    resolver.resolve = function (handler: IContainer, requestor: IContainer): any {
       return getter(key, handler, requestor);
     };
 
@@ -455,14 +455,11 @@ export const enum ResolverStrategy {
 
 /** @internal */
 export class Resolver implements IResolver, IRegistration {
-  public key: Key;
-  public strategy: ResolverStrategy;
-  public state: any;
-  public constructor(key: Key, strategy: ResolverStrategy, state: any) {
-    this.key = key;
-    this.strategy = strategy;
-    this.state = state;
-  }
+  public constructor(
+    public key: Key,
+    public strategy: ResolverStrategy,
+    public state: any,
+  ) {}
 
   public register(container: IContainer, key?: Key): IResolver {
     return container.registerResolver(key || this.key, this);
@@ -500,7 +497,7 @@ export class Resolver implements IResolver, IRegistration {
   }
 
   public getFactory(container: IContainer): IFactory | null {
-    let resolver: IResolver<any> | null;
+    let resolver: IResolver | null;
     switch (this.strategy) {
       case ResolverStrategy.singleton:
       case ResolverStrategy.transient:
@@ -530,17 +527,13 @@ export interface IInvoker<T extends Constructable = any> {
 
 /** @internal */
 export class Factory<T extends Constructable = any> implements IFactory<T> {
-  public Type: T;
-  private readonly invoker: IInvoker;
-  private readonly dependencies: Key[];
-  private transformers: ((instance: any) => any)[] | null;
+  private transformers: ((instance: any) => any)[] | null = null;
 
-  public constructor(Type: T, invoker: IInvoker, dependencies: Key[]) {
-    this.Type = Type;
-    this.invoker = invoker;
-    this.dependencies = dependencies;
-    this.transformers = null;
-  }
+  public constructor(
+    public Type: T,
+    private readonly invoker: IInvoker,
+    private readonly dependencies: Key[],
+  ) {}
 
   public construct(container: IContainer, dynamicDependencies?: Key[]): Resolved<T> {
     const transformers = this.transformers;
@@ -569,7 +562,7 @@ export class Factory<T extends Constructable = any> implements IFactory<T> {
   }
 }
 
-const createFactory = (function() {
+const createFactory = (function () {
   function invokeWithDynamicDependencies<T>(
     container: IContainer,
     Type: Constructable<T>,
@@ -652,7 +645,10 @@ const createFactory = (function() {
     invokeWithDynamicDependencies
   };
 
-  return function <T extends Constructable>(Type: T): Factory<T> {
+  return function <T extends Constructable> (Type: T): Factory<T> {
+    if (isNativeFunction(Type)) {
+      Reporter.write(5, Type.name);
+    }
     const dependencies = DI.getDependencies(Type);
     const invoker = classInvokers.length > dependencies.length ? classInvokers[dependencies.length] : fallbackInvoker;
     return new Factory<T>(Type, invoker, dependencies);
@@ -703,8 +699,9 @@ export class Container implements IContainer {
 
   private readonly resourceResolvers: Record<string, IResolver | undefined>;
 
-  public constructor(private readonly parent: Container | null) {
-
+  public constructor(
+    private readonly parent: Container | null,
+  ) {
     if (parent === null) {
       this.path = this.id.toString();
       this.root = this;
@@ -977,7 +974,7 @@ export class ParameterizedRegistry implements IRegistry {
   }
 }
 
-export const Registration = Object.freeze({
+export const Registration = {
   instance<T>(key: Key, value: T): IRegistration<T> {
     return new Resolver(key, ResolverStrategy.instance, value);
   },
@@ -996,14 +993,10 @@ export const Registration = Object.freeze({
   defer(key: Key, ...params: unknown[]): IRegistry {
     return new ParameterizedRegistry(key, params);
   }
-});
+};
 
 export class InstanceProvider<K extends Key> implements IResolver<K | null> {
-  private instance: Resolved<K> | null;
-
-  public constructor() {
-    this.instance = null;
-  }
+  private instance: Resolved<K> | null = null;
 
   public prepare(instance: Resolved<K>): void {
     this.instance = instance;
@@ -1023,9 +1016,7 @@ export class InstanceProvider<K extends Key> implements IResolver<K | null> {
 
 /** @internal */
 export function validateKey(key: any): void {
-  // note: design:paramTypes which will default to Object if the param types cannot be statically analyzed by tsc
-  // this check is intended to properly report on that problem - under no circumstance should Object be a valid key anyway
-  if (key == null || key === Object) {
+  if (key === null || key === void 0) {
     throw Reporter.error(5);
   }
 }
