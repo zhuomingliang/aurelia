@@ -1,7 +1,6 @@
-import { PLATFORM, Registration, Reporter, toArray } from '@aurelia/kernel';
-import { IProjectorLocator } from '@aurelia/runtime';
+import { PLATFORM, Registration, Reporter, toArray, Metadata } from '@aurelia/kernel';
+import { IProjectorLocator, CustomElement } from '@aurelia/runtime';
 import { IShadowDOMStyles, IShadowDOMGlobalStyles } from './styles/shadow-dom-styles';
-const slice = Array.prototype.slice;
 const defaultShadowOptions = {
     mode: 'open'
 };
@@ -25,10 +24,12 @@ export class HTMLProjectorLocator {
 const childObserverOptions = { childList: true };
 /** @internal */
 export class ShadowDOMProjector {
-    constructor(dom, $controller, host, definition) {
+    constructor(dom, 
+    // eslint-disable-next-line @typescript-eslint/prefer-readonly
+    $controller, host, definition) {
         this.dom = dom;
-        this.host = host;
         this.$controller = $controller;
+        this.host = host;
         let shadowOptions;
         if (definition.shadowOptions instanceof Object &&
             'mode' in definition.shadowOptions) {
@@ -38,8 +39,8 @@ export class ShadowDOMProjector {
             shadowOptions = defaultShadowOptions;
         }
         this.shadowRoot = host.attachShadow(shadowOptions);
-        this.host.$controller = $controller;
-        this.shadowRoot.$controller = $controller;
+        Metadata.define(CustomElement.name, $controller, this.host);
+        Metadata.define(CustomElement.name, $controller, this.shadowRoot);
     }
     get children() {
         return this.host.childNodes;
@@ -74,7 +75,7 @@ export class ContainerlessProjector {
             this.childNodes = PLATFORM.emptyArray;
         }
         this.host = dom.convertToRenderLocation(host);
-        this.host.$controller = $controller;
+        Metadata.define(CustomElement.name, $controller, this.host);
     }
     get children() {
         return this.childNodes;
@@ -98,7 +99,7 @@ export class ContainerlessProjector {
 export class HostProjector {
     constructor($controller, host) {
         this.host = host;
-        this.host.$controller = $controller;
+        Metadata.define(CustomElement.name, $controller, host);
     }
     get children() {
         return this.host.childNodes;

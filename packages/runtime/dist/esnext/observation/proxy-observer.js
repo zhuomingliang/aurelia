@@ -1,15 +1,14 @@
 var ProxyObserver_1;
-import { __decorate } from "tslib";
+import { __decorate, __metadata } from "tslib";
 import { PLATFORM } from '@aurelia/kernel';
 import { proxySubscriberCollection, subscriberCollection } from './subscriber-collection';
-const slice = Array.prototype.slice;
 const lookup = new WeakMap();
 let ProxySubscriberCollection = class ProxySubscriberCollection {
     constructor(proxy, raw, key) {
-        this.inBatch = false;
+        this.proxy = proxy;
         this.raw = raw;
         this.key = key;
-        this.proxy = proxy;
+        this.inBatch = false;
         this.subscribe = this.addSubscriber;
         this.unsubscribe = this.removeSubscriber;
         if (raw[key] instanceof Object) { // Ensure we observe array indices and newly created object properties
@@ -31,7 +30,8 @@ let ProxySubscriberCollection = class ProxySubscriberCollection {
     }
 };
 ProxySubscriberCollection = __decorate([
-    subscriberCollection()
+    subscriberCollection(),
+    __metadata("design:paramtypes", [Object, Object, Object])
 ], ProxySubscriberCollection);
 export { ProxySubscriberCollection };
 let ProxyObserver = ProxyObserver_1 = class ProxyObserver {
@@ -161,7 +161,8 @@ let ProxyObserver = ProxyObserver_1 = class ProxyObserver {
     }
 };
 ProxyObserver = ProxyObserver_1 = __decorate([
-    proxySubscriberCollection()
+    proxySubscriberCollection(),
+    __metadata("design:paramtypes", [Object])
 ], ProxyObserver);
 export { ProxyObserver };
 //# sourceMappingURL=proxy-observer.js.map

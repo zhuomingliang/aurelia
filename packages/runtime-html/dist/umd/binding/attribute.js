@@ -29,17 +29,17 @@
         // for normal attributes, targetAttribute and targetProperty are the same and can be ignore
         targetAttribute, targetProperty, mode, observerLocator, locator) {
             this.sourceExpression = sourceExpression;
-            this.target = target;
             this.targetAttribute = targetAttribute;
             this.targetProperty = targetProperty;
             this.mode = mode;
             this.observerLocator = observerLocator;
             this.locator = locator;
-            runtime_1.connectable.assignIdTo(this);
             this.$state = 0 /* none */;
-            this.$scheduler = locator.get(runtime_1.IScheduler);
             this.$scope = null;
             this.persistentFlags = 0 /* none */;
+            this.target = target;
+            runtime_1.connectable.assignIdTo(this);
+            this.$scheduler = locator.get(runtime_1.IScheduler);
         }
         updateTarget(value, flags) {
             flags |= this.persistentFlags;
@@ -154,7 +154,8 @@
         }
     };
     AttributeBinding = tslib_1.__decorate([
-        runtime_1.connectable()
+        runtime_1.connectable(),
+        tslib_1.__metadata("design:paramtypes", [Object, Object, String, String, Number, Object, Object])
     ], AttributeBinding);
     exports.AttributeBinding = AttributeBinding;
 });

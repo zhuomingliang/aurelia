@@ -2,13 +2,13 @@ import { PLATFORM, kebabCase } from '@aurelia/kernel';
 export class StyleAttributeAccessor {
     constructor(scheduler, flags, obj) {
         this.scheduler = scheduler;
-        this.obj = obj;
         this.currentValue = '';
         this.oldValue = '';
         this.styles = {};
         this.version = 0;
         this.hasChanges = false;
         this.task = null;
+        this.obj = obj;
         this.persistentFlags = flags & 805306383 /* targetObserverFlags */;
     }
     getValue() {
@@ -98,6 +98,7 @@ export class StyleAttributeAccessor {
                 name = tuple[0];
                 value = tuple[1];
                 this.setProperty(name, value);
+                styles[name] = version;
             }
             this.styles = styles;
             this.version += 1;

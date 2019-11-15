@@ -1,4 +1,4 @@
-import { DI, PLATFORM, Registration, Reporter } from '@aurelia/kernel';
+import { DI, Metadata, PLATFORM, Protocol, Registration, Reporter } from '@aurelia/kernel';
 /** @internal */
 export class CharSpec {
     constructor(chars, repeat, isSymbol, isInverted) {
@@ -58,8 +58,8 @@ export class CharSpec {
 }
 export class Interpretation {
     constructor() {
-        this._pattern = '';
         this.parts = PLATFORM.emptyArray;
+        this._pattern = '';
         this.currentRecord = {};
         this.partsRecord = {};
     }
@@ -111,8 +111,8 @@ export class State {
         this.charSpec = charSpec;
         this.nextStates = [];
         this.types = null;
-        this.patterns = patterns;
         this.isEndpoint = false;
+        this.patterns = patterns;
     }
     get pattern() {
         return this.isEndpoint ? this.patterns[0] : null;
@@ -177,6 +177,7 @@ export class State {
 /** @internal */
 export class StaticSegment {
     constructor(text) {
+        this.text = text;
         this.text = text;
         const len = this.len = text.length;
         const specs = this.specs = [];
@@ -361,16 +362,33 @@ function validatePrototype(handler, patternDefs) {
 export const IAttributePattern = DI.createInterface('IAttributePattern').noDefault();
 export function attributePattern(...patternDefs) {
     return function decorator(target) {
-        const proto = target.prototype;
-        // Note: the prototype is really meant to be an intersection type between IAttrubutePattern and IAttributePatternHandler, but
-        // a type with an index signature cannot be intersected with anything else that has normal property names.
-        // So we're forced to use a union type and cast it here.
-        validatePrototype(proto, patternDefs);
-        proto.$patternDefs = patternDefs;
-        target.register = function register(container) {
-            Registration.singleton(IAttributePattern, target).register(container);
-        };
-        return target;
+        return AttributePattern.define(patternDefs, target);
     };
 }
+export class AttributePatternResourceDefinition {
+    constructor(Type) {
+        this.Type = Type;
+        this.name = (void 0);
+    }
+    register(container) {
+        Registration.singleton(IAttributePattern, this.Type).register(container);
+    }
+}
+export const AttributePattern = Object.freeze({
+    name: Protocol.resource.keyFor('attribute-pattern'),
+    definitionAnnotationKey: 'attribute-pattern-definitions',
+    define(patternDefs, Type) {
+        validatePrototype(Type.prototype, patternDefs);
+        const definition = new AttributePatternResourceDefinition(Type);
+        const { name, definitionAnnotationKey } = AttributePattern;
+        Metadata.define(name, definition, Type);
+        Protocol.resource.appendTo(Type, name);
+        Protocol.annotation.set(Type, definitionAnnotationKey, patternDefs);
+        Protocol.annotation.appendTo(Type, definitionAnnotationKey);
+        return Type;
+    },
+    getPatternDefinitions(Type) {
+        return Protocol.annotation.get(Type, AttributePattern.definitionAnnotationKey);
+    }
+});
 //# sourceMappingURL=attribute-pattern.js.map

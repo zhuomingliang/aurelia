@@ -4,11 +4,12 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "@aurelia/kernel"], factory);
+        define(["require", "exports", "tslib", "@aurelia/kernel"], factory);
     }
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    const tslib_1 = require("tslib");
     const kernel_1 = require("@aurelia/kernel");
     var ViewModelKind;
     (function (ViewModelKind) {
@@ -27,7 +28,7 @@
     })(MountStrategy = exports.MountStrategy || (exports.MountStrategy = {}));
     exports.IViewFactory = kernel_1.DI.createInterface('IViewFactory').noDefault();
     exports.ILifecycle = kernel_1.DI.createInterface('ILifecycle').withDefault(x => x.singleton(Lifecycle));
-    class BoundQueue {
+    let BoundQueue = class BoundQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.depth = 0;
@@ -95,9 +96,13 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    BoundQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], BoundQueue);
     exports.BoundQueue = BoundQueue;
-    class UnboundQueue {
+    let UnboundQueue = class UnboundQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.depth = 0;
@@ -165,9 +170,13 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    UnboundQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], UnboundQueue);
     exports.UnboundQueue = UnboundQueue;
-    class AttachedQueue {
+    let AttachedQueue = class AttachedQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.depth = 0;
@@ -237,9 +246,13 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    AttachedQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], AttachedQueue);
     exports.AttachedQueue = AttachedQueue;
-    class DetachedQueue {
+    let DetachedQueue = class DetachedQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.depth = 0;
@@ -309,11 +322,16 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    DetachedQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], DetachedQueue);
     exports.DetachedQueue = DetachedQueue;
-    class MountQueue {
+    let MountQueue = class MountQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
+            this.depth = 0;
             this.head = void 0;
             this.tail = void 0;
         }
@@ -369,9 +387,13 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    MountQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], MountQueue);
     exports.MountQueue = MountQueue;
-    class UnmountQueue {
+    let UnmountQueue = class UnmountQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.head = void 0;
@@ -428,9 +450,13 @@
                 } while (cur !== void 0);
             }
         }
-    }
+    };
+    UnmountQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], UnmountQueue);
     exports.UnmountQueue = UnmountQueue;
-    class BatchQueue {
+    let BatchQueue = class BatchQueue {
         constructor(lifecycle) {
             this.lifecycle = lifecycle;
             this.queue = [];
@@ -472,7 +498,11 @@
                 }
             }
         }
-    }
+    };
+    BatchQueue = tslib_1.__decorate([
+        tslib_1.__param(0, exports.ILifecycle),
+        tslib_1.__metadata("design:paramtypes", [Object])
+    ], BatchQueue);
     exports.BatchQueue = BatchQueue;
     class Lifecycle {
         constructor() {

@@ -1,9 +1,10 @@
+import { __decorate, __metadata, __param } from "tslib";
 import { DI, IContainer, Registration } from '@aurelia/kernel';
 import { IDOM, IDOMInitializer, IScheduler, DOM } from '@aurelia/runtime';
 import { RuntimeHtmlConfiguration, HTMLDOM } from '@aurelia/runtime-html';
 import { JSDOM } from 'jsdom';
 import { JSDOMScheduler } from './jsdom-scheduler';
-class JSDOMInitializer {
+let JSDOMInitializer = class JSDOMInitializer {
     constructor(container) {
         this.container = container;
         this.jsdom = new JSDOM('', { pretendToBeVisual: true });
@@ -42,8 +43,11 @@ class JSDOMInitializer {
         }
         return dom;
     }
-}
-JSDOMInitializer.inject = [IContainer];
+};
+JSDOMInitializer = __decorate([
+    __param(0, IContainer),
+    __metadata("design:paramtypes", [Object])
+], JSDOMInitializer);
 export const IDOMInitializerRegistration = JSDOMInitializer;
 export const IJSDOMSchedulerRegistration = JSDOMScheduler;
 /**

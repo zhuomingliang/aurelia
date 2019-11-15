@@ -1,7 +1,9 @@
-import { __decorate } from "tslib";
+import { __decorate, __metadata } from "tslib";
+import { ILifecycle } from '../lifecycle';
 import { createIndexMap } from '../observation';
 import { CollectionSizeObserver } from './collection-size-observer';
 import { collectionSubscriberCollection } from './subscriber-collection';
+const observerLookup = new WeakMap();
 const proto = Map.prototype;
 const $set = proto.set;
 const $clear = proto.clear;
@@ -17,7 +19,7 @@ const observe = {
         if ($this.$raw !== undefined) {
             $this = $this.$raw;
         }
-        const o = $this.$observer;
+        const o = observerLookup.get($this);
         if (o === undefined) {
             $set.call($this, key, value);
             return this;
@@ -51,7 +53,7 @@ const observe = {
         if ($this.$raw !== undefined) {
             $this = $this.$raw;
         }
-        const o = $this.$observer;
+        const o = observerLookup.get($this);
         if (o === undefined) {
             return $clear.call($this);
         }
@@ -77,7 +79,7 @@ const observe = {
         if ($this.$raw !== undefined) {
             $this = $this.$raw;
         }
-        const o = $this.$observer;
+        const o = observerLookup.get($this);
         if (o === undefined) {
             return $delete.call($this, value);
         }
@@ -141,7 +143,7 @@ let MapObserver = class MapObserver {
         this.indexMap = createIndexMap(map.size);
         this.lifecycle = lifecycle;
         this.lengthObserver = (void 0);
-        map.$observer = this;
+        observerLookup.set(map, this);
     }
     notify() {
         if (this.lifecycle.batch.depth > 0) {
@@ -172,13 +174,15 @@ let MapObserver = class MapObserver {
     }
 };
 MapObserver = __decorate([
-    collectionSubscriberCollection()
+    collectionSubscriberCollection(),
+    __metadata("design:paramtypes", [Number, Object, Object])
 ], MapObserver);
 export { MapObserver };
 export function getMapObserver(flags, lifecycle, map) {
-    if (map.$observer === void 0) {
-        map.$observer = new MapObserver(flags, lifecycle, map);
+    const observer = observerLookup.get(map);
+    if (observer === void 0) {
+        return new MapObserver(flags, lifecycle, map);
     }
-    return map.$observer;
+    return observer;
 }
 //# sourceMappingURL=map-observer.js.map

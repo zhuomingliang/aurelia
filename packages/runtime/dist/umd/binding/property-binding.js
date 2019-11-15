@@ -4,7 +4,7 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "tslib", "@aurelia/kernel", "../flags", "../lifecycle", "./ast", "./connectable"], factory);
+        define(["require", "exports", "tslib", "@aurelia/kernel", "../flags", "../lifecycle", "../observation/observer-locator", "./ast", "./connectable"], factory);
     }
 })(function (require, exports) {
     "use strict";
@@ -13,6 +13,7 @@
     const kernel_1 = require("@aurelia/kernel");
     const flags_1 = require("../flags");
     const lifecycle_1 = require("../lifecycle");
+    const observer_locator_1 = require("../observation/observer-locator");
     const ast_1 = require("./ast");
     const connectable_1 = require("./connectable");
     // BindingMode is not a const enum (and therefore not inlined), so assigning them to a variable to save a member accessor is a minor perf tweak
@@ -21,19 +22,20 @@
     const toViewOrOneTime = toView | oneTime;
     let PropertyBinding = class PropertyBinding {
         constructor(sourceExpression, target, targetProperty, mode, observerLocator, locator) {
-            connectable_1.connectable.assignIdTo(this);
-            this.$state = 0 /* none */;
-            this.$lifecycle = locator.get(lifecycle_1.ILifecycle);
-            this.$scope = void 0;
-            this.locator = locator;
-            this.mode = mode;
-            this.observerLocator = observerLocator;
             this.sourceExpression = sourceExpression;
             this.target = target;
             this.targetProperty = targetProperty;
+            this.mode = mode;
+            this.observerLocator = observerLocator;
+            this.locator = locator;
+            this.$state = 0 /* none */;
+            this.$scope = void 0;
             this.targetObserver = void 0;
             this.persistentFlags = 0 /* none */;
+            connectable_1.connectable.assignIdTo(this);
+            this.$lifecycle = locator.get(lifecycle_1.ILifecycle);
         }
+        ;
         updateTarget(value, flags) {
             flags |= this.persistentFlags;
             this.targetObserver.setValue(value, flags);
@@ -144,7 +146,8 @@
         }
     };
     PropertyBinding = tslib_1.__decorate([
-        connectable_1.connectable()
+        connectable_1.connectable(),
+        tslib_1.__metadata("design:paramtypes", [Object, Object, String, Number, Object, Object])
     ], PropertyBinding);
     exports.PropertyBinding = PropertyBinding;
 });

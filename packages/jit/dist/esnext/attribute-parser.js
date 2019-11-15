@@ -1,16 +1,17 @@
-import { all, DI, Profiler } from '@aurelia/kernel';
+import { __decorate, __metadata, __param } from "tslib";
+import { all, DI } from '@aurelia/kernel';
 import { AttrSyntax } from './ast';
-import { IAttributePattern, ISyntaxInterpreter } from './attribute-pattern';
+import { AttributePattern, IAttributePattern, ISyntaxInterpreter } from './attribute-pattern';
 export const IAttributeParser = DI.createInterface('IAttributeParser').withDefault(x => x.singleton(AttributeParser));
-const { enter, leave } = Profiler.createTimer('AttributeParser');
 /** @internal */
-export class AttributeParser {
+let AttributeParser = class AttributeParser {
     constructor(interpreter, attrPatterns) {
         this.interpreter = interpreter;
         this.cache = {};
+        this.interpreter = interpreter;
         const patterns = this.patterns = {};
         attrPatterns.forEach(attrPattern => {
-            const defs = attrPattern.$patternDefs;
+            const defs = AttributePattern.getPatternDefinitions(attrPattern.constructor);
             interpreter.add(defs);
             defs.forEach(def => {
                 patterns[def.pattern] = attrPattern;
@@ -30,6 +31,11 @@ export class AttributeParser {
             return this.patterns[pattern][pattern](name, value, interpretation.parts);
         }
     }
-}
-AttributeParser.inject = [ISyntaxInterpreter, all(IAttributePattern)];
+};
+AttributeParser = __decorate([
+    __param(0, ISyntaxInterpreter),
+    __param(1, all(IAttributePattern)),
+    __metadata("design:paramtypes", [Object, Array])
+], AttributeParser);
+export { AttributeParser };
 //# sourceMappingURL=attribute-parser.js.map

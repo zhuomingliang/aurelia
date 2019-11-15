@@ -19,7 +19,6 @@
     const observer_locator_1 = require("../../observation/observer-locator");
     const bindable_1 = require("../../templating/bindable");
     const custom_attribute_1 = require("../custom-attribute");
-    const isMountedOrAttached = 64 /* isMounted */ | 32 /* isAttached */;
     let Repeat = class Repeat {
         constructor(location, renderable, factory) {
             this.location = location;
@@ -158,18 +157,18 @@
         // todo: subscribe to collection from inner expression
         checkCollectionObserver(flags) {
             const oldObserver = this.observer;
-            if ((this.$controller.state & 5 /* isBoundOrBinding */) > 0) {
+            if ((flags & 8192 /* fromUnbind */)) {
+                if (oldObserver !== void 0) {
+                    oldObserver.unsubscribeFromCollection(this);
+                }
+            }
+            else if ((this.$controller.state & 5 /* isBoundOrBinding */) > 0) {
                 const newObserver = this.observer = observer_locator_1.getCollectionObserver(flags, this.$controller.lifecycle, this.items);
                 if (oldObserver !== newObserver && oldObserver) {
                     oldObserver.unsubscribeFromCollection(this);
                 }
                 if (newObserver) {
                     newObserver.subscribeToCollection(this);
-                }
-            }
-            else {
-                if (oldObserver !== void 0) {
-                    oldObserver.unsubscribeFromCollection(this);
                 }
             }
         }
@@ -431,13 +430,15 @@
         }
     };
     tslib_1.__decorate([
-        bindable_1.bindable
+        bindable_1.bindable,
+        tslib_1.__metadata("design:type", Object)
     ], Repeat.prototype, "items", void 0);
     Repeat = tslib_1.__decorate([
         custom_attribute_1.templateController('repeat'),
         tslib_1.__param(0, dom_1.IRenderLocation),
         tslib_1.__param(1, lifecycle_1.IController),
-        tslib_1.__param(2, lifecycle_1.IViewFactory)
+        tslib_1.__param(2, lifecycle_1.IViewFactory),
+        tslib_1.__metadata("design:paramtypes", [Object, Object, Object])
     ], Repeat);
     exports.Repeat = Repeat;
     let prevIndices;

@@ -22,7 +22,6 @@
             this.location = location;
             this.id = kernel_1.nextId('au$component');
             this.id = kernel_1.nextId('au$component');
-            this.factory = factory;
             this.view = this.factory.create();
             this.view.hold(location, 1 /* insertBefore */);
         }
@@ -51,12 +50,14 @@
         }
     };
     tslib_1.__decorate([
-        bindable_1.bindable
+        bindable_1.bindable,
+        tslib_1.__metadata("design:type", Object)
     ], With.prototype, "value", void 0);
     With = tslib_1.__decorate([
         custom_attribute_1.templateController('with'),
         tslib_1.__param(0, lifecycle_1.IViewFactory),
-        tslib_1.__param(1, dom_1.IRenderLocation)
+        tslib_1.__param(1, dom_1.IRenderLocation),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], With);
     exports.With = With;
 });

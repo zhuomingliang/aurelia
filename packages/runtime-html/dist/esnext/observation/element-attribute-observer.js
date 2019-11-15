@@ -1,5 +1,5 @@
-import { __decorate } from "tslib";
-import { DOM, subscriberCollection, } from '@aurelia/runtime';
+import { __decorate, __metadata } from "tslib";
+import { DOM, IObserverLocator, subscriberCollection, IScheduler, } from '@aurelia/runtime';
 /**
  * Observer for handling two-way binding with attributes
  * Has different strategy for class/style and normal attributes
@@ -130,7 +130,8 @@ let AttributeObserver = class AttributeObserver {
     }
 };
 AttributeObserver = __decorate([
-    subscriberCollection()
+    subscriberCollection(),
+    __metadata("design:paramtypes", [Object, Number, Object, Object, String, String])
 ], AttributeObserver);
 export { AttributeObserver };
 const startObservation = (element, subscription) => {
@@ -144,7 +145,7 @@ const startObservation = (element, subscription) => {
 };
 const stopObservation = (element, subscription) => {
     const $eMObservers = element.$eMObservers;
-    if ($eMObservers.delete(subscription)) {
+    if ($eMObservers && $eMObservers.delete(subscription)) {
         if ($eMObservers.size === 0) {
             element.$mObserver.disconnect();
             element.$mObserver = undefined;

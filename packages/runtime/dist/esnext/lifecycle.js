@@ -1,3 +1,4 @@
+import { __decorate, __metadata, __param } from "tslib";
 import { DI, Registration, } from '@aurelia/kernel';
 export var ViewModelKind;
 (function (ViewModelKind) {
@@ -16,7 +17,7 @@ export var MountStrategy;
 })(MountStrategy || (MountStrategy = {}));
 export const IViewFactory = DI.createInterface('IViewFactory').noDefault();
 export const ILifecycle = DI.createInterface('ILifecycle').withDefault(x => x.singleton(Lifecycle));
-export class BoundQueue {
+let BoundQueue = class BoundQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.depth = 0;
@@ -84,8 +85,13 @@ export class BoundQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class UnboundQueue {
+};
+BoundQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], BoundQueue);
+export { BoundQueue };
+let UnboundQueue = class UnboundQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.depth = 0;
@@ -153,8 +159,13 @@ export class UnboundQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class AttachedQueue {
+};
+UnboundQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], UnboundQueue);
+export { UnboundQueue };
+let AttachedQueue = class AttachedQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.depth = 0;
@@ -224,8 +235,13 @@ export class AttachedQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class DetachedQueue {
+};
+AttachedQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], AttachedQueue);
+export { AttachedQueue };
+let DetachedQueue = class DetachedQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.depth = 0;
@@ -295,10 +311,16 @@ export class DetachedQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class MountQueue {
+};
+DetachedQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], DetachedQueue);
+export { DetachedQueue };
+let MountQueue = class MountQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
+        this.depth = 0;
         this.head = void 0;
         this.tail = void 0;
     }
@@ -354,8 +376,13 @@ export class MountQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class UnmountQueue {
+};
+MountQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], MountQueue);
+export { MountQueue };
+let UnmountQueue = class UnmountQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.head = void 0;
@@ -412,8 +439,13 @@ export class UnmountQueue {
             } while (cur !== void 0);
         }
     }
-}
-export class BatchQueue {
+};
+UnmountQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], UnmountQueue);
+export { UnmountQueue };
+let BatchQueue = class BatchQueue {
     constructor(lifecycle) {
         this.lifecycle = lifecycle;
         this.queue = [];
@@ -455,7 +487,12 @@ export class BatchQueue {
             }
         }
     }
-}
+};
+BatchQueue = __decorate([
+    __param(0, ILifecycle),
+    __metadata("design:paramtypes", [Object])
+], BatchQueue);
+export { BatchQueue };
 export class Lifecycle {
     constructor() {
         this.batch = new BatchQueue(this);

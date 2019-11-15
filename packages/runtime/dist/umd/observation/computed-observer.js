@@ -4,15 +4,15 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "tslib", "@aurelia/kernel", "./subscriber-collection"], factory);
+        define(["require", "exports", "tslib", "@aurelia/kernel", "./observer-locator", "./subscriber-collection"], factory);
     }
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const tslib_1 = require("tslib");
     const kernel_1 = require("@aurelia/kernel");
+    const observer_locator_1 = require("./observer-locator");
     const subscriber_collection_1 = require("./subscriber-collection");
-    const slice = Array.prototype.slice;
     function computed(config) {
         return function (target, key) {
             /**
@@ -47,11 +47,11 @@
             const overrides = givenOverrides && givenOverrides[propertyName] || computedOverrideDefaults;
             if (descriptor.set) {
                 if (overrides.volatile) {
-                    return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator, lifecycle);
+                    return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator);
                 }
                 return new CustomSetterObserver(instance, propertyName, descriptor);
             }
-            return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator, lifecycle);
+            return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator);
         }
         throw kernel_1.Reporter.error(18, propertyName);
     }
@@ -61,8 +61,9 @@
         constructor(obj, propertyKey, descriptor) {
             this.obj = obj;
             this.propertyKey = propertyKey;
-            this.currentValue = this.oldValue = undefined;
             this.descriptor = descriptor;
+            this.currentValue = void 0;
+            this.oldValue = void 0;
             this.observing = false;
         }
         setValue(newValue) {
@@ -91,22 +92,24 @@
         }
     };
     CustomSetterObserver = tslib_1.__decorate([
-        subscriber_collection_1.subscriberCollection()
+        subscriber_collection_1.subscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Object, String, Object])
     ], CustomSetterObserver);
     exports.CustomSetterObserver = CustomSetterObserver;
     // Used when there is no setter, and the getter is dependent on other properties of the object;
     // Used when there is a setter but the value of the getter can change based on properties set outside of the setter.
     let GetterObserver = class GetterObserver {
-        constructor(flags, overrides, obj, propertyKey, descriptor, observerLocator, lifecycle) {
+        constructor(flags, overrides, obj, propertyKey, descriptor, observerLocator) {
+            this.overrides = overrides;
             this.obj = obj;
             this.propertyKey = propertyKey;
-            this.isCollecting = false;
-            this.currentValue = this.oldValue = undefined;
+            this.descriptor = descriptor;
+            this.currentValue = void 0;
+            this.oldValue = void 0;
             this.propertyDeps = [];
             this.collectionDeps = [];
-            this.overrides = overrides;
             this.subscriberCount = 0;
-            this.descriptor = descriptor;
+            this.isCollecting = false;
             this.proxy = new Proxy(obj, createGetterTraps(flags, observerLocator, this));
             const get = () => this.getValue();
             Reflect.defineProperty(obj, propertyKey, { get, set: descriptor.set });
@@ -183,12 +186,13 @@
         }
     };
     GetterObserver = tslib_1.__decorate([
-        subscriber_collection_1.subscriberCollection()
+        subscriber_collection_1.subscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Number, Object, Object, String, Object, Object])
     ], GetterObserver);
     exports.GetterObserver = GetterObserver;
     const toStringTag = Object.prototype.toString;
     function createGetterTraps(flags, observerLocator, observer) {
-        const traps = {
+        return {
             get: function (target, key, receiver) {
                 if (observer.doNotCollect(key)) {
                     return Reflect.get(target, key, receiver);
@@ -217,7 +221,6 @@
                 return proxyOrValue(flags, target, key, observerLocator, observer);
             }
         };
-        return traps;
     }
     function proxyOrValue(flags, target, key, observerLocator, observer) {
         const value = Reflect.get(target, key, target);

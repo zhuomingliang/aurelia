@@ -120,10 +120,11 @@
     };
     TargetObserverLocator = tslib_1.__decorate([
         tslib_1.__param(0, runtime_1.IDOM),
-        tslib_1.__param(1, svg_analyzer_1.ISVGAnalyzer)
+        tslib_1.__param(1, svg_analyzer_1.ISVGAnalyzer),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], TargetObserverLocator);
     exports.TargetObserverLocator = TargetObserverLocator;
-    class TargetAccessorLocator {
+    let TargetAccessorLocator = class TargetAccessorLocator {
         constructor(dom, svgAnalyzer) {
             this.dom = dom;
             this.svgAnalyzer = svgAnalyzer;
@@ -162,9 +163,13 @@
         handles(flags, obj) {
             return this.dom.isNodeInstance(obj);
         }
-    }
+    };
+    TargetAccessorLocator = tslib_1.__decorate([
+        tslib_1.__param(0, runtime_1.IDOM),
+        tslib_1.__param(1, svg_analyzer_1.ISVGAnalyzer),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
+    ], TargetAccessorLocator);
     exports.TargetAccessorLocator = TargetAccessorLocator;
-    TargetAccessorLocator.inject = [runtime_1.IDOM, svg_analyzer_1.ISVGAnalyzer];
     const IsDataAttribute = {};
     function isDataAttribute(obj, propertyName, svgAnalyzer) {
         if (IsDataAttribute[propertyName] === true) {

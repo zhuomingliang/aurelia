@@ -31,10 +31,10 @@ export declare class CompositionRoot<T extends INode = INode> {
 }
 export declare class Aurelia<TNode extends INode = INode> {
     readonly container: IContainer;
-    readonly isRunning: boolean;
-    readonly isStarting: boolean;
-    readonly isStopping: boolean;
-    readonly root: CompositionRoot<TNode>;
+    get isRunning(): boolean;
+    get isStarting(): boolean;
+    get isStopping(): boolean;
+    get root(): CompositionRoot<TNode>;
     private task;
     private _isRunning;
     private _isStarting;
@@ -43,7 +43,7 @@ export declare class Aurelia<TNode extends INode = INode> {
     private next?;
     constructor(container?: IContainer);
     register(...params: any[]): this;
-    app(config: ISinglePageApp<TNode>): this;
+    app(config: ISinglePageApp<TNode>): Omit<this, 'register' | 'app'>;
     start(root?: CompositionRoot<TNode> | undefined): ILifecycleTask;
     stop(root?: CompositionRoot<TNode> | undefined): ILifecycleTask;
     wait(): Promise<void>;

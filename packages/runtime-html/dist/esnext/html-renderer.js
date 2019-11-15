@@ -1,4 +1,4 @@
-import { __decorate } from "tslib";
+import { __decorate, __metadata, __param } from "tslib";
 import { addBinding, BindingMode, ensureExpression, IExpressionParser, instructionRenderer, InterpolationBinding, IObserverLocator, MultiInterpolationBinding, PropertyBinding } from '@aurelia/runtime';
 import { AttributeBinding } from './binding/attribute';
 import { Listener } from './binding/listener';
@@ -26,10 +26,13 @@ class TextBindingRenderer {
         addBinding(renderable, binding);
     }
 };
-TextBindingRenderer.inject = [IExpressionParser, IObserverLocator];
 TextBindingRenderer = __decorate([
     instructionRenderer("ha" /* textBinding */)
     /** @internal */
+    ,
+    __param(0, IExpressionParser),
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], TextBindingRenderer);
 export { TextBindingRenderer };
 let ListenerBindingRenderer = 
@@ -40,15 +43,19 @@ class ListenerBindingRenderer {
         this.eventManager = eventManager;
     }
     render(flags, dom, context, renderable, target, instruction) {
+        // eslint-disable-next-line @typescript-eslint/restrict-plus-operands
         const expr = ensureExpression(this.parser, instruction.from, 80 /* IsEventCommand */ | (instruction.strategy + 6 /* DelegationStrategyDelta */));
         const binding = new Listener(dom, instruction.to, instruction.strategy, expr, target, instruction.preventDefault, this.eventManager, context);
         addBinding(renderable, binding);
     }
 };
-ListenerBindingRenderer.inject = [IExpressionParser, IEventManager];
 ListenerBindingRenderer = __decorate([
     instructionRenderer("hb" /* listenerBinding */)
     /** @internal */
+    ,
+    __param(0, IExpressionParser),
+    __param(1, IEventManager),
+    __metadata("design:paramtypes", [Object, Object])
 ], ListenerBindingRenderer);
 export { ListenerBindingRenderer };
 let SetAttributeRenderer = 
@@ -94,10 +101,13 @@ class StylePropertyBindingRenderer {
         addBinding(renderable, binding);
     }
 };
-StylePropertyBindingRenderer.inject = [IExpressionParser, IObserverLocator];
 StylePropertyBindingRenderer = __decorate([
     instructionRenderer("hd" /* stylePropertyBinding */)
     /** @internal */
+    ,
+    __param(0, IExpressionParser),
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], StylePropertyBindingRenderer);
 export { StylePropertyBindingRenderer };
 let AttributeBindingRenderer = 
@@ -113,12 +123,16 @@ class AttributeBindingRenderer {
         addBinding(renderable, binding);
     }
 };
-AttributeBindingRenderer.inject = [IExpressionParser, IObserverLocator];
 AttributeBindingRenderer = __decorate([
     instructionRenderer("hc" /* attributeBinding */)
     /** @internal */
+    ,
+    __param(0, IExpressionParser),
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], AttributeBindingRenderer);
 export { AttributeBindingRenderer };
+// http://jsben.ch/7n5Kt
 function addClasses(classList, className) {
     const len = className.length;
     let start = 0;

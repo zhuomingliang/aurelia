@@ -51,7 +51,7 @@
     }
     exports.instructionRenderer = instructionRenderer;
     /* @internal */
-    class Renderer {
+    let Renderer = class Renderer {
         constructor(instructionRenderers) {
             const record = this.instructionRenderers = {};
             instructionRenderers.forEach(item => {
@@ -94,9 +94,12 @@
                 }
             }
         }
-    }
+    };
+    Renderer = tslib_1.__decorate([
+        tslib_1.__param(0, kernel_1.all(rendering_engine_1.IInstructionRenderer)),
+        tslib_1.__metadata("design:paramtypes", [Array])
+    ], Renderer);
     exports.Renderer = Renderer;
-    Renderer.inject = [kernel_1.all(rendering_engine_1.IInstructionRenderer)];
     function ensureExpression(parser, srcOrExpr, bindingType) {
         if (typeof srcOrExpr === 'string') {
             return parser.parse(srcOrExpr, bindingType);
@@ -133,45 +136,41 @@
         if (refTargetName === 'element') {
             return refHost;
         }
-        const $auRefs = refHost.$au;
-        if ($auRefs === void 0) {
-            // todo: code error code, this message is from v1
-            throw new Error(`No Aurelia APIs are defined for the element: "${refHost.tagName}".`);
-        }
-        let refTargetController;
         switch (refTargetName) {
             case 'controller':
                 // this means it supports returning undefined
-                return refHost.$controller;
+                return custom_element_1.CustomElement.for(refHost);
             case 'view':
                 // todo: returns node sequences for fun?
                 throw new Error('Not supported API');
             case 'view-model':
                 // this means it supports returning undefined
-                return refHost.$controller.viewModel;
-            default:
-                refTargetController = $auRefs[refTargetName];
-                if (refTargetController === void 0) {
+                return custom_element_1.CustomElement.for(refHost).viewModel;
+            default: {
+                const caController = custom_attribute_1.CustomAttribute.for(refHost, refTargetName);
+                if (caController !== void 0) {
+                    return caController.viewModel;
+                }
+                const ceController = custom_element_1.CustomElement.for(refHost, refTargetName);
+                if (ceController === void 0) {
                     throw new Error(`Attempted to reference "${refTargetName}", but it was not found amongst the target's API.`);
                 }
-                return refTargetController.viewModel;
+                return ceController.viewModel;
+            }
         }
     }
     exports.getRefTarget = getRefTarget;
-    function setControllerReference(controller, host, referenceName) {
-        let $auRefs = host.$au;
-        if ($auRefs === void 0) {
-            $auRefs = host.$au = new ControllersLookup();
-        }
-        $auRefs[referenceName] = controller;
-    }
-    class ControllersLookup {
-    }
     let SetPropertyRenderer = 
     /** @internal */
     class SetPropertyRenderer {
         render(flags, dom, context, renderable, target, instruction) {
-            getTarget(target)[instruction.to] = (instruction.value === '' ? true : instruction.value); // Yeah, yeah..
+            const obj = getTarget(target);
+            if (obj.$observers !== void 0 && obj.$observers[instruction.to] !== void 0) {
+                obj.$observers[instruction.to].setValue(instruction.value, 4096 /* fromBind */);
+            }
+            else {
+                obj[instruction.to] = instruction.value;
+            }
         }
     };
     SetPropertyRenderer = tslib_1.__decorate([
@@ -184,11 +183,12 @@
     class CustomElementRenderer {
         render(flags, dom, context, renderable, target, instruction) {
             const operation = context.beginComponentOperation(renderable, target, instruction, null, null, target, true);
-            const component = context.get(custom_element_1.CustomElement.keyFrom(instruction.res));
+            const key = custom_element_1.CustomElement.keyFrom(instruction.res);
+            const component = context.get(key);
             const instructionRenderers = context.get(rendering_engine_1.IRenderer).instructionRenderers;
             const childInstructions = instruction.instructions;
             const controller = controller_1.Controller.forCustomElement(component, context, target, flags, instruction);
-            setControllerReference(controller, controller.host, instruction.res);
+            kernel_1.Metadata.define(key, controller, target);
             let current;
             for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
                 current = childInstructions[i];
@@ -208,11 +208,12 @@
     class CustomAttributeRenderer {
         render(flags, dom, context, renderable, target, instruction) {
             const operation = context.beginComponentOperation(renderable, target, instruction);
-            const component = context.get(custom_attribute_1.CustomAttribute.keyFrom(instruction.res));
+            const key = custom_attribute_1.CustomAttribute.keyFrom(instruction.res);
+            const component = context.get(key);
             const instructionRenderers = context.get(rendering_engine_1.IRenderer).instructionRenderers;
             const childInstructions = instruction.instructions;
             const controller = controller_1.Controller.forCustomAttribute(component, context, flags);
-            setControllerReference(controller, target, instruction.res);
+            kernel_1.Metadata.define(key, controller, target);
             let current;
             for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
                 current = childInstructions[i];
@@ -238,7 +239,8 @@
             const factory = this.renderingEngine.getViewFactory(dom, instruction.def, context);
             const renderLocation = dom.convertToRenderLocation(target);
             const operation = context.beginComponentOperation(renderable, target, instruction, factory, parts, renderLocation, false);
-            const component = context.get(custom_attribute_1.CustomAttribute.keyFrom(instruction.res));
+            const key = custom_attribute_1.CustomAttribute.keyFrom(instruction.res);
+            const component = context.get(key);
             const instructionRenderers = context.get(rendering_engine_1.IRenderer).instructionRenderers;
             const childInstructions = instruction.instructions;
             if (instruction.parts !== void 0) {
@@ -256,11 +258,11 @@
                 }
             }
             const controller = controller_1.Controller.forCustomAttribute(component, context, flags);
+            kernel_1.Metadata.define(key, controller, renderLocation);
             if (instruction.link) {
                 const controllers = renderable.controllers;
                 component.link(controllers[controllers.length - 1]);
             }
-            setControllerReference(controller, renderLocation, instruction.res);
             let current;
             for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
                 current = childInstructions[i];
@@ -275,7 +277,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, rendering_engine_1.IRenderingEngine),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], TemplateControllerRenderer);
     exports.TemplateControllerRenderer = TemplateControllerRenderer;
     let LetElementRenderer = 
@@ -305,7 +308,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, expression_parser_1.IExpressionParser),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], LetElementRenderer);
     exports.LetElementRenderer = LetElementRenderer;
     let CallBindingRenderer = 
@@ -326,7 +330,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, expression_parser_1.IExpressionParser),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], CallBindingRenderer);
     exports.CallBindingRenderer = CallBindingRenderer;
     let RefBindingRenderer = 
@@ -345,7 +350,8 @@
         instructionRenderer("rj" /* refBinding */)
         /** @internal */
         ,
-        tslib_1.__param(0, expression_parser_1.IExpressionParser)
+        tslib_1.__param(0, expression_parser_1.IExpressionParser),
+        tslib_1.__metadata("design:paramtypes", [Object])
     ], RefBindingRenderer);
     exports.RefBindingRenderer = RefBindingRenderer;
     let InterpolationBindingRenderer = 
@@ -372,7 +378,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, expression_parser_1.IExpressionParser),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], InterpolationBindingRenderer);
     exports.InterpolationBindingRenderer = InterpolationBindingRenderer;
     let PropertyBindingRenderer = 
@@ -393,7 +400,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, expression_parser_1.IExpressionParser),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], PropertyBindingRenderer);
     exports.PropertyBindingRenderer = PropertyBindingRenderer;
     let IteratorBindingRenderer = 
@@ -414,7 +422,8 @@
         /** @internal */
         ,
         tslib_1.__param(0, expression_parser_1.IExpressionParser),
-        tslib_1.__param(1, observer_locator_1.IObserverLocator)
+        tslib_1.__param(1, observer_locator_1.IObserverLocator),
+        tslib_1.__metadata("design:paramtypes", [Object, Object])
     ], IteratorBindingRenderer);
     exports.IteratorBindingRenderer = IteratorBindingRenderer;
 });

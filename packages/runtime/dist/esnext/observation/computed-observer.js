@@ -1,7 +1,7 @@
-import { __decorate } from "tslib";
+import { __decorate, __metadata } from "tslib";
 import { PLATFORM, Reporter } from '@aurelia/kernel';
+import { IObserverLocator } from './observer-locator';
 import { subscriberCollection } from './subscriber-collection';
-const slice = Array.prototype.slice;
 export function computed(config) {
     return function (target, key) {
         /**
@@ -35,11 +35,11 @@ export function createComputedObserver(flags, observerLocator, dirtyChecker, lif
         const overrides = givenOverrides && givenOverrides[propertyName] || computedOverrideDefaults;
         if (descriptor.set) {
             if (overrides.volatile) {
-                return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator, lifecycle);
+                return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator);
             }
             return new CustomSetterObserver(instance, propertyName, descriptor);
         }
-        return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator, lifecycle);
+        return new GetterObserver(flags, overrides, instance, propertyName, descriptor, observerLocator);
     }
     throw Reporter.error(18, propertyName);
 }
@@ -48,8 +48,9 @@ let CustomSetterObserver = class CustomSetterObserver {
     constructor(obj, propertyKey, descriptor) {
         this.obj = obj;
         this.propertyKey = propertyKey;
-        this.currentValue = this.oldValue = undefined;
         this.descriptor = descriptor;
+        this.currentValue = void 0;
+        this.oldValue = void 0;
         this.observing = false;
     }
     setValue(newValue) {
@@ -78,22 +79,24 @@ let CustomSetterObserver = class CustomSetterObserver {
     }
 };
 CustomSetterObserver = __decorate([
-    subscriberCollection()
+    subscriberCollection(),
+    __metadata("design:paramtypes", [Object, String, Object])
 ], CustomSetterObserver);
 export { CustomSetterObserver };
 // Used when there is no setter, and the getter is dependent on other properties of the object;
 // Used when there is a setter but the value of the getter can change based on properties set outside of the setter.
 let GetterObserver = class GetterObserver {
-    constructor(flags, overrides, obj, propertyKey, descriptor, observerLocator, lifecycle) {
+    constructor(flags, overrides, obj, propertyKey, descriptor, observerLocator) {
+        this.overrides = overrides;
         this.obj = obj;
         this.propertyKey = propertyKey;
-        this.isCollecting = false;
-        this.currentValue = this.oldValue = undefined;
+        this.descriptor = descriptor;
+        this.currentValue = void 0;
+        this.oldValue = void 0;
         this.propertyDeps = [];
         this.collectionDeps = [];
-        this.overrides = overrides;
         this.subscriberCount = 0;
-        this.descriptor = descriptor;
+        this.isCollecting = false;
         this.proxy = new Proxy(obj, createGetterTraps(flags, observerLocator, this));
         const get = () => this.getValue();
         Reflect.defineProperty(obj, propertyKey, { get, set: descriptor.set });
@@ -170,12 +173,13 @@ let GetterObserver = class GetterObserver {
     }
 };
 GetterObserver = __decorate([
-    subscriberCollection()
+    subscriberCollection(),
+    __metadata("design:paramtypes", [Number, Object, Object, String, Object, Object])
 ], GetterObserver);
 export { GetterObserver };
 const toStringTag = Object.prototype.toString;
 function createGetterTraps(flags, observerLocator, observer) {
-    const traps = {
+    return {
         get: function (target, key, receiver) {
             if (observer.doNotCollect(key)) {
                 return Reflect.get(target, key, receiver);
@@ -204,7 +208,6 @@ function createGetterTraps(flags, observerLocator, observer) {
             return proxyOrValue(flags, target, key, observerLocator, observer);
         }
     };
-    return traps;
 }
 function proxyOrValue(flags, target, key, observerLocator, observer) {
     const value = Reflect.get(target, key, target);

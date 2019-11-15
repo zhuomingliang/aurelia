@@ -1,31 +1,33 @@
 var SelfObserver_1;
-import { __decorate } from "tslib";
+import { __decorate, __metadata } from "tslib";
 import { Reporter } from '@aurelia/kernel';
+import { ILifecycle } from '../lifecycle';
 import { ProxyObserver } from './proxy-observer';
 import { subscriberCollection } from './subscriber-collection';
 let SelfObserver = SelfObserver_1 = class SelfObserver {
-    constructor(lifecycle, flags, obj, propertyName, cbName) {
+    constructor(lifecycle, flags, obj, propertyKey, cbName) {
         this.lifecycle = lifecycle;
+        this.obj = obj;
+        this.propertyKey = propertyKey;
+        this.currentValue = void 0;
+        this.oldValue = void 0;
+        this.inBatch = false;
         let isProxy = false;
         if (ProxyObserver.isProxy(obj)) {
             isProxy = true;
-            obj.$observer.subscribe(this, propertyName);
+            obj.$observer.subscribe(this, propertyKey);
             this.obj = obj.$raw;
         }
         else {
             this.obj = obj;
         }
-        this.propertyKey = propertyName;
-        this.currentValue = void 0;
-        this.oldValue = void 0;
-        this.inBatch = false;
         this.callback = this.obj[cbName];
         if (this.callback === void 0) {
             this.observing = false;
         }
         else {
             this.observing = true;
-            this.currentValue = this.obj[this.propertyKey];
+            this.currentValue = obj[propertyKey];
             if (!isProxy) {
                 this.createGetterSetter();
             }
@@ -87,7 +89,8 @@ let SelfObserver = SelfObserver_1 = class SelfObserver {
     }
 };
 SelfObserver = SelfObserver_1 = __decorate([
-    subscriberCollection()
+    subscriberCollection(),
+    __metadata("design:paramtypes", [Object, Number, Object, String, String])
 ], SelfObserver);
 export { SelfObserver };
 //# sourceMappingURL=self-observer.js.map

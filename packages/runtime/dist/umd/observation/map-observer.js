@@ -4,15 +4,17 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "tslib", "../observation", "./collection-size-observer", "./subscriber-collection"], factory);
+        define(["require", "exports", "tslib", "../lifecycle", "../observation", "./collection-size-observer", "./subscriber-collection"], factory);
     }
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const tslib_1 = require("tslib");
+    const lifecycle_1 = require("../lifecycle");
     const observation_1 = require("../observation");
     const collection_size_observer_1 = require("./collection-size-observer");
     const subscriber_collection_1 = require("./subscriber-collection");
+    const observerLookup = new WeakMap();
     const proto = Map.prototype;
     const $set = proto.set;
     const $clear = proto.clear;
@@ -28,7 +30,7 @@
             if ($this.$raw !== undefined) {
                 $this = $this.$raw;
             }
-            const o = $this.$observer;
+            const o = observerLookup.get($this);
             if (o === undefined) {
                 $set.call($this, key, value);
                 return this;
@@ -62,7 +64,7 @@
             if ($this.$raw !== undefined) {
                 $this = $this.$raw;
             }
-            const o = $this.$observer;
+            const o = observerLookup.get($this);
             if (o === undefined) {
                 return $clear.call($this);
             }
@@ -88,7 +90,7 @@
             if ($this.$raw !== undefined) {
                 $this = $this.$raw;
             }
-            const o = $this.$observer;
+            const o = observerLookup.get($this);
             if (o === undefined) {
                 return $delete.call($this, value);
             }
@@ -154,7 +156,7 @@
             this.indexMap = observation_1.createIndexMap(map.size);
             this.lifecycle = lifecycle;
             this.lengthObserver = (void 0);
-            map.$observer = this;
+            observerLookup.set(map, this);
         }
         notify() {
             if (this.lifecycle.batch.depth > 0) {
@@ -185,14 +187,16 @@
         }
     };
     MapObserver = tslib_1.__decorate([
-        subscriber_collection_1.collectionSubscriberCollection()
+        subscriber_collection_1.collectionSubscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Number, Object, Object])
     ], MapObserver);
     exports.MapObserver = MapObserver;
     function getMapObserver(flags, lifecycle, map) {
-        if (map.$observer === void 0) {
-            map.$observer = new MapObserver(flags, lifecycle, map);
+        const observer = observerLookup.get(map);
+        if (observer === void 0) {
+            return new MapObserver(flags, lifecycle, map);
         }
-        return map.$observer;
+        return observer;
     }
     exports.getMapObserver = getMapObserver;
 });

@@ -1,7 +1,8 @@
-import { __decorate } from "tslib";
-import { Reporter, } from '@aurelia/kernel';
+import { __decorate, __metadata } from "tslib";
+import { IServiceLocator, Reporter, } from '@aurelia/kernel';
 import { BindingMode, } from '../flags';
 import { ILifecycle } from '../lifecycle';
+import { IObserverLocator } from '../observation/observer-locator';
 import { hasBind, hasUnbind, } from './ast';
 import { connectable, } from './connectable';
 // BindingMode is not a const enum (and therefore not inlined), so assigning them to a variable to save a member accessor is a minor perf tweak
@@ -10,19 +11,20 @@ const { oneTime, toView, fromView } = BindingMode;
 const toViewOrOneTime = toView | oneTime;
 let PropertyBinding = class PropertyBinding {
     constructor(sourceExpression, target, targetProperty, mode, observerLocator, locator) {
-        connectable.assignIdTo(this);
-        this.$state = 0 /* none */;
-        this.$lifecycle = locator.get(ILifecycle);
-        this.$scope = void 0;
-        this.locator = locator;
-        this.mode = mode;
-        this.observerLocator = observerLocator;
         this.sourceExpression = sourceExpression;
         this.target = target;
         this.targetProperty = targetProperty;
+        this.mode = mode;
+        this.observerLocator = observerLocator;
+        this.locator = locator;
+        this.$state = 0 /* none */;
+        this.$scope = void 0;
         this.targetObserver = void 0;
         this.persistentFlags = 0 /* none */;
+        connectable.assignIdTo(this);
+        this.$lifecycle = locator.get(ILifecycle);
     }
+    ;
     updateTarget(value, flags) {
         flags |= this.persistentFlags;
         this.targetObserver.setValue(value, flags);
@@ -133,7 +135,8 @@ let PropertyBinding = class PropertyBinding {
     }
 };
 PropertyBinding = __decorate([
-    connectable()
+    connectable(),
+    __metadata("design:paramtypes", [Object, Object, String, Number, Object, Object])
 ], PropertyBinding);
 export { PropertyBinding };
 //# sourceMappingURL=property-binding.js.map

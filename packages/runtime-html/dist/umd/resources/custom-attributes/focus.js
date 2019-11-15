@@ -4,23 +4,25 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "tslib", "@aurelia/runtime"], factory);
+        define(["require", "exports", "tslib", "@aurelia/runtime", "../../dom"], factory);
     }
 })(function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     const tslib_1 = require("tslib");
     const runtime_1 = require("@aurelia/runtime");
+    const dom_1 = require("../../dom");
     /**
      * Focus attribute for element focus binding
      */
     let Focus = class Focus {
         constructor(element, dom) {
-            this.element = element;
             this.dom = dom;
-            this.element = element;
-            this.dom = dom;
+            /**
+             * Indicates whether `apply` should be called when `attached` callback is invoked
+             */
             this.needsApply = false;
+            this.element = element;
         }
         binding() {
             this.valueChanged();
@@ -39,10 +41,10 @@
             if (this.$controller.state & 32 /* isAttached */) {
                 this.apply();
             }
-            // If the element is not currently connect
-            // toggle the flag to add pending work for later
-            // in attached lifecycle
             else {
+                // If the element is not currently connect
+                // toggle the flag to add pending work for later
+                // in attached lifecycle
                 this.needsApply = true;
             }
         }
@@ -76,14 +78,14 @@
             if (e.type === 'focus') {
                 this.value = true;
             }
-            // else, it's blur event
-            // when a blur event happens, there are two situations
-            // 1. the element itself lost the focus
-            // 2. window lost the focus
-            // To handle both (1) and (2), only need to check if
-            // current active element is still the same element of this focus custom attribute
-            // If it's not, it's a blur event happened on Window because the browser tab lost focus
             else if (this.dom.document.activeElement !== this.element) {
+                // else, it's blur event
+                // when a blur event happens, there are two situations
+                // 1. the element itself lost the focus
+                // 2. window lost the focus
+                // To handle both (1) and (2), only need to check if
+                // current active element is still the same element of this focus custom attribute
+                // If it's not, it's a blur event happened on Window because the browser tab lost focus
                 this.value = false;
             }
         }
@@ -101,12 +103,14 @@
         }
     };
     tslib_1.__decorate([
-        runtime_1.bindable({ mode: runtime_1.BindingMode.twoWay })
+        runtime_1.bindable({ mode: runtime_1.BindingMode.twoWay }),
+        tslib_1.__metadata("design:type", Object)
     ], Focus.prototype, "value", void 0);
     Focus = tslib_1.__decorate([
         runtime_1.customAttribute('focus'),
         tslib_1.__param(0, runtime_1.INode),
-        tslib_1.__param(1, runtime_1.IDOM)
+        tslib_1.__param(1, runtime_1.IDOM),
+        tslib_1.__metadata("design:paramtypes", [Object, dom_1.HTMLDOM])
     ], Focus);
     exports.Focus = Focus;
 });

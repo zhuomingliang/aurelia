@@ -12,7 +12,6 @@
     const kernel_1 = require("@aurelia/kernel");
     const runtime_1 = require("@aurelia/runtime");
     const shadow_dom_styles_1 = require("./styles/shadow-dom-styles");
-    const slice = Array.prototype.slice;
     const defaultShadowOptions = {
         mode: 'open'
     };
@@ -37,10 +36,12 @@
     const childObserverOptions = { childList: true };
     /** @internal */
     class ShadowDOMProjector {
-        constructor(dom, $controller, host, definition) {
+        constructor(dom, 
+        // eslint-disable-next-line @typescript-eslint/prefer-readonly
+        $controller, host, definition) {
             this.dom = dom;
-            this.host = host;
             this.$controller = $controller;
+            this.host = host;
             let shadowOptions;
             if (definition.shadowOptions instanceof Object &&
                 'mode' in definition.shadowOptions) {
@@ -50,8 +51,8 @@
                 shadowOptions = defaultShadowOptions;
             }
             this.shadowRoot = host.attachShadow(shadowOptions);
-            this.host.$controller = $controller;
-            this.shadowRoot.$controller = $controller;
+            kernel_1.Metadata.define(runtime_1.CustomElement.name, $controller, this.host);
+            kernel_1.Metadata.define(runtime_1.CustomElement.name, $controller, this.shadowRoot);
         }
         get children() {
             return this.host.childNodes;
@@ -87,7 +88,7 @@
                 this.childNodes = kernel_1.PLATFORM.emptyArray;
             }
             this.host = dom.convertToRenderLocation(host);
-            this.host.$controller = $controller;
+            kernel_1.Metadata.define(runtime_1.CustomElement.name, $controller, this.host);
         }
         get children() {
             return this.childNodes;
@@ -112,7 +113,7 @@
     class HostProjector {
         constructor($controller, host) {
             this.host = host;
-            this.host.$controller = $controller;
+            kernel_1.Metadata.define(runtime_1.CustomElement.name, $controller, host);
         }
         get children() {
             return this.host.childNodes;

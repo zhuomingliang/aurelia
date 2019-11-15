@@ -141,7 +141,8 @@
         }
     };
     AttributeObserver = tslib_1.__decorate([
-        runtime_1.subscriberCollection()
+        runtime_1.subscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Object, Number, Object, Object, String, String])
     ], AttributeObserver);
     exports.AttributeObserver = AttributeObserver;
     const startObservation = (element, subscription) => {
@@ -155,7 +156,7 @@
     };
     const stopObservation = (element, subscription) => {
         const $eMObservers = element.$eMObservers;
-        if ($eMObservers.delete(subscription)) {
+        if ($eMObservers && $eMObservers.delete(subscription)) {
             if ($eMObservers.size === 0) {
                 element.$mObserver.disconnect();
                 element.$mObserver = undefined;

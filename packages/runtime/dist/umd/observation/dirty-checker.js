@@ -57,9 +57,9 @@
     let DirtyChecker = class DirtyChecker {
         constructor(scheduler) {
             this.scheduler = scheduler;
+            this.tracked = [];
             this.task = null;
             this.elapsedFrames = 0;
-            this.tracked = [];
         }
         createProperty(obj, propertyName) {
             if (exports.DirtyCheckSettings.throw) {
@@ -104,14 +104,15 @@
         }
     };
     DirtyChecker = tslib_1.__decorate([
-        tslib_1.__param(0, scheduler_1.IScheduler)
+        tslib_1.__param(0, scheduler_1.IScheduler),
+        tslib_1.__metadata("design:paramtypes", [Object])
     ], DirtyChecker);
     exports.DirtyChecker = DirtyChecker;
     let DirtyCheckProperty = class DirtyCheckProperty {
         constructor(dirtyChecker, obj, propertyKey) {
+            this.dirtyChecker = dirtyChecker;
             this.obj = obj;
             this.propertyKey = propertyKey;
-            this.dirtyChecker = dirtyChecker;
         }
         isDirty() {
             return this.oldValue !== this.obj[this.propertyKey];
@@ -136,7 +137,8 @@
         }
     };
     DirtyCheckProperty = tslib_1.__decorate([
-        subscriber_collection_1.subscriberCollection()
+        subscriber_collection_1.subscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Object, Object, String])
     ], DirtyCheckProperty);
     exports.DirtyCheckProperty = DirtyCheckProperty;
 });

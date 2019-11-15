@@ -1,15 +1,17 @@
-import { __decorate, __param } from "tslib";
+import { __decorate, __metadata, __param } from "tslib";
 import { bindable, BindingMode, customAttribute, IDOM, INode } from '@aurelia/runtime';
+import { HTMLDOM } from '../../dom';
 /**
  * Focus attribute for element focus binding
  */
 let Focus = class Focus {
     constructor(element, dom) {
-        this.element = element;
         this.dom = dom;
-        this.element = element;
-        this.dom = dom;
+        /**
+         * Indicates whether `apply` should be called when `attached` callback is invoked
+         */
         this.needsApply = false;
+        this.element = element;
     }
     binding() {
         this.valueChanged();
@@ -28,10 +30,10 @@ let Focus = class Focus {
         if (this.$controller.state & 32 /* isAttached */) {
             this.apply();
         }
-        // If the element is not currently connect
-        // toggle the flag to add pending work for later
-        // in attached lifecycle
         else {
+            // If the element is not currently connect
+            // toggle the flag to add pending work for later
+            // in attached lifecycle
             this.needsApply = true;
         }
     }
@@ -65,14 +67,14 @@ let Focus = class Focus {
         if (e.type === 'focus') {
             this.value = true;
         }
-        // else, it's blur event
-        // when a blur event happens, there are two situations
-        // 1. the element itself lost the focus
-        // 2. window lost the focus
-        // To handle both (1) and (2), only need to check if
-        // current active element is still the same element of this focus custom attribute
-        // If it's not, it's a blur event happened on Window because the browser tab lost focus
         else if (this.dom.document.activeElement !== this.element) {
+            // else, it's blur event
+            // when a blur event happens, there are two situations
+            // 1. the element itself lost the focus
+            // 2. window lost the focus
+            // To handle both (1) and (2), only need to check if
+            // current active element is still the same element of this focus custom attribute
+            // If it's not, it's a blur event happened on Window because the browser tab lost focus
             this.value = false;
         }
     }
@@ -90,12 +92,14 @@ let Focus = class Focus {
     }
 };
 __decorate([
-    bindable({ mode: BindingMode.twoWay })
+    bindable({ mode: BindingMode.twoWay }),
+    __metadata("design:type", Object)
 ], Focus.prototype, "value", void 0);
 Focus = __decorate([
     customAttribute('focus'),
     __param(0, INode),
-    __param(1, IDOM)
+    __param(1, IDOM),
+    __metadata("design:paramtypes", [Object, HTMLDOM])
 ], Focus);
 export { Focus };
 //# sourceMappingURL=focus.js.map

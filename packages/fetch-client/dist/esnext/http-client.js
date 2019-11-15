@@ -1,16 +1,18 @@
+import { __decorate, __metadata, __param } from "tslib";
 import { IDOM } from '@aurelia/runtime';
-import { DOM } from '@aurelia/runtime-html';
+import { DOM, HTMLDOM } from '@aurelia/runtime-html';
 import { HttpClientConfiguration } from './http-client-configuration';
 import { RetryInterceptor } from './retry-interceptor';
 const absoluteUrlRegexp = /^([a-z][a-z0-9+\-.]*:)?\/\//i;
 /**
  * An HTTP client based on the Fetch API.
  */
-export class HttpClient {
+let HttpClient = class HttpClient {
     /**
      * Creates an instance of HttpClient.
      */
     constructor(dom) {
+        this.dom = dom;
         if (dom.window.fetch === undefined) {
             throw new Error('HttpClient requires a Fetch API implementation, but the current environment doesn\'t support it. You may need to load a polyfill such as https://github.com/github/fetch');
         }
@@ -256,8 +258,12 @@ export class HttpClient {
         }
         return this.fetch(input, init);
     }
-}
-HttpClient.inject = [IDOM];
+};
+HttpClient = __decorate([
+    __param(0, IDOM),
+    __metadata("design:paramtypes", [HTMLDOM])
+], HttpClient);
+export { HttpClient };
 function parseHeaderValues(headers) {
     const parsedHeaders = {};
     const $headers = headers !== undefined ? headers : {};

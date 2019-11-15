@@ -1,4 +1,4 @@
-import { __decorate, __param } from "tslib";
+import { __decorate, __metadata, __param } from "tslib";
 import { all, Registration, Reporter, Metadata, } from '@aurelia/kernel';
 import { CallBinding } from './binding/call-binding';
 import { IExpressionParser } from './binding/expression-parser';
@@ -39,7 +39,7 @@ export function instructionRenderer(instructionType) {
     };
 }
 /* @internal */
-export class Renderer {
+let Renderer = class Renderer {
     constructor(instructionRenderers) {
         const record = this.instructionRenderers = {};
         instructionRenderers.forEach(item => {
@@ -82,8 +82,12 @@ export class Renderer {
             }
         }
     }
-}
-Renderer.inject = [all(IInstructionRenderer)];
+};
+Renderer = __decorate([
+    __param(0, all(IInstructionRenderer)),
+    __metadata("design:paramtypes", [Array])
+], Renderer);
+export { Renderer };
 export function ensureExpression(parser, srcOrExpr, bindingType) {
     if (typeof srcOrExpr === 'string') {
         return parser.parse(srcOrExpr, bindingType);
@@ -116,44 +120,40 @@ export function getRefTarget(refHost, refTargetName) {
     if (refTargetName === 'element') {
         return refHost;
     }
-    const $auRefs = refHost.$au;
-    if ($auRefs === void 0) {
-        // todo: code error code, this message is from v1
-        throw new Error(`No Aurelia APIs are defined for the element: "${refHost.tagName}".`);
-    }
-    let refTargetController;
     switch (refTargetName) {
         case 'controller':
             // this means it supports returning undefined
-            return refHost.$controller;
+            return CustomElement.for(refHost);
         case 'view':
             // todo: returns node sequences for fun?
             throw new Error('Not supported API');
         case 'view-model':
             // this means it supports returning undefined
-            return refHost.$controller.viewModel;
-        default:
-            refTargetController = $auRefs[refTargetName];
-            if (refTargetController === void 0) {
+            return CustomElement.for(refHost).viewModel;
+        default: {
+            const caController = CustomAttribute.for(refHost, refTargetName);
+            if (caController !== void 0) {
+                return caController.viewModel;
+            }
+            const ceController = CustomElement.for(refHost, refTargetName);
+            if (ceController === void 0) {
                 throw new Error(`Attempted to reference "${refTargetName}", but it was not found amongst the target's API.`);
             }
-            return refTargetController.viewModel;
+            return ceController.viewModel;
+        }
     }
-}
-function setControllerReference(controller, host, referenceName) {
-    let $auRefs = host.$au;
-    if ($auRefs === void 0) {
-        $auRefs = host.$au = new ControllersLookup();
-    }
-    $auRefs[referenceName] = controller;
-}
-class ControllersLookup {
 }
 let SetPropertyRenderer = 
 /** @internal */
 class SetPropertyRenderer {
     render(flags, dom, context, renderable, target, instruction) {
-        getTarget(target)[instruction.to] = (instruction.value === '' ? true : instruction.value); // Yeah, yeah..
+        const obj = getTarget(target);
+        if (obj.$observers !== void 0 && obj.$observers[instruction.to] !== void 0) {
+            obj.$observers[instruction.to].setValue(instruction.value, 4096 /* fromBind */);
+        }
+        else {
+            obj[instruction.to] = instruction.value;
+        }
     }
 };
 SetPropertyRenderer = __decorate([
@@ -166,11 +166,12 @@ let CustomElementRenderer =
 class CustomElementRenderer {
     render(flags, dom, context, renderable, target, instruction) {
         const operation = context.beginComponentOperation(renderable, target, instruction, null, null, target, true);
-        const component = context.get(CustomElement.keyFrom(instruction.res));
+        const key = CustomElement.keyFrom(instruction.res);
+        const component = context.get(key);
         const instructionRenderers = context.get(IRenderer).instructionRenderers;
         const childInstructions = instruction.instructions;
         const controller = Controller.forCustomElement(component, context, target, flags, instruction);
-        setControllerReference(controller, controller.host, instruction.res);
+        Metadata.define(key, controller, target);
         let current;
         for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
             current = childInstructions[i];
@@ -190,11 +191,12 @@ let CustomAttributeRenderer =
 class CustomAttributeRenderer {
     render(flags, dom, context, renderable, target, instruction) {
         const operation = context.beginComponentOperation(renderable, target, instruction);
-        const component = context.get(CustomAttribute.keyFrom(instruction.res));
+        const key = CustomAttribute.keyFrom(instruction.res);
+        const component = context.get(key);
         const instructionRenderers = context.get(IRenderer).instructionRenderers;
         const childInstructions = instruction.instructions;
         const controller = Controller.forCustomAttribute(component, context, flags);
-        setControllerReference(controller, target, instruction.res);
+        Metadata.define(key, controller, target);
         let current;
         for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
             current = childInstructions[i];
@@ -220,7 +222,8 @@ class TemplateControllerRenderer {
         const factory = this.renderingEngine.getViewFactory(dom, instruction.def, context);
         const renderLocation = dom.convertToRenderLocation(target);
         const operation = context.beginComponentOperation(renderable, target, instruction, factory, parts, renderLocation, false);
-        const component = context.get(CustomAttribute.keyFrom(instruction.res));
+        const key = CustomAttribute.keyFrom(instruction.res);
+        const component = context.get(key);
         const instructionRenderers = context.get(IRenderer).instructionRenderers;
         const childInstructions = instruction.instructions;
         if (instruction.parts !== void 0) {
@@ -238,11 +241,11 @@ class TemplateControllerRenderer {
             }
         }
         const controller = Controller.forCustomAttribute(component, context, flags);
+        Metadata.define(key, controller, renderLocation);
         if (instruction.link) {
             const controllers = renderable.controllers;
             component.link(controllers[controllers.length - 1]);
         }
-        setControllerReference(controller, renderLocation, instruction.res);
         let current;
         for (let i = 0, ii = childInstructions.length; i < ii; ++i) {
             current = childInstructions[i];
@@ -257,7 +260,8 @@ TemplateControllerRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IRenderingEngine),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], TemplateControllerRenderer);
 export { TemplateControllerRenderer };
 let LetElementRenderer = 
@@ -287,7 +291,8 @@ LetElementRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IExpressionParser),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], LetElementRenderer);
 export { LetElementRenderer };
 let CallBindingRenderer = 
@@ -308,7 +313,8 @@ CallBindingRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IExpressionParser),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], CallBindingRenderer);
 export { CallBindingRenderer };
 let RefBindingRenderer = 
@@ -327,7 +333,8 @@ RefBindingRenderer = __decorate([
     instructionRenderer("rj" /* refBinding */)
     /** @internal */
     ,
-    __param(0, IExpressionParser)
+    __param(0, IExpressionParser),
+    __metadata("design:paramtypes", [Object])
 ], RefBindingRenderer);
 export { RefBindingRenderer };
 let InterpolationBindingRenderer = 
@@ -354,7 +361,8 @@ InterpolationBindingRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IExpressionParser),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], InterpolationBindingRenderer);
 export { InterpolationBindingRenderer };
 let PropertyBindingRenderer = 
@@ -375,7 +383,8 @@ PropertyBindingRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IExpressionParser),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], PropertyBindingRenderer);
 export { PropertyBindingRenderer };
 let IteratorBindingRenderer = 
@@ -396,7 +405,8 @@ IteratorBindingRenderer = __decorate([
     /** @internal */
     ,
     __param(0, IExpressionParser),
-    __param(1, IObserverLocator)
+    __param(1, IObserverLocator),
+    __metadata("design:paramtypes", [Object, Object])
 ], IteratorBindingRenderer);
 export { IteratorBindingRenderer };
 //# sourceMappingURL=renderer.js.map

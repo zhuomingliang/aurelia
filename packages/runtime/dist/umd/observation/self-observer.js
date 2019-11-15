@@ -4,7 +4,7 @@
         if (v !== undefined) module.exports = v;
     }
     else if (typeof define === "function" && define.amd) {
-        define(["require", "exports", "tslib", "@aurelia/kernel", "./proxy-observer", "./subscriber-collection"], factory);
+        define(["require", "exports", "tslib", "@aurelia/kernel", "../lifecycle", "./proxy-observer", "./subscriber-collection"], factory);
     }
 })(function (require, exports) {
     "use strict";
@@ -12,31 +12,33 @@
     Object.defineProperty(exports, "__esModule", { value: true });
     const tslib_1 = require("tslib");
     const kernel_1 = require("@aurelia/kernel");
+    const lifecycle_1 = require("../lifecycle");
     const proxy_observer_1 = require("./proxy-observer");
     const subscriber_collection_1 = require("./subscriber-collection");
     let SelfObserver = SelfObserver_1 = class SelfObserver {
-        constructor(lifecycle, flags, obj, propertyName, cbName) {
+        constructor(lifecycle, flags, obj, propertyKey, cbName) {
             this.lifecycle = lifecycle;
+            this.obj = obj;
+            this.propertyKey = propertyKey;
+            this.currentValue = void 0;
+            this.oldValue = void 0;
+            this.inBatch = false;
             let isProxy = false;
             if (proxy_observer_1.ProxyObserver.isProxy(obj)) {
                 isProxy = true;
-                obj.$observer.subscribe(this, propertyName);
+                obj.$observer.subscribe(this, propertyKey);
                 this.obj = obj.$raw;
             }
             else {
                 this.obj = obj;
             }
-            this.propertyKey = propertyName;
-            this.currentValue = void 0;
-            this.oldValue = void 0;
-            this.inBatch = false;
             this.callback = this.obj[cbName];
             if (this.callback === void 0) {
                 this.observing = false;
             }
             else {
                 this.observing = true;
-                this.currentValue = this.obj[this.propertyKey];
+                this.currentValue = obj[propertyKey];
                 if (!isProxy) {
                     this.createGetterSetter();
                 }
@@ -98,7 +100,8 @@
         }
     };
     SelfObserver = SelfObserver_1 = tslib_1.__decorate([
-        subscriber_collection_1.subscriberCollection()
+        subscriber_collection_1.subscriberCollection(),
+        tslib_1.__metadata("design:paramtypes", [Object, Number, Object, String, String])
     ], SelfObserver);
     exports.SelfObserver = SelfObserver;
 });
