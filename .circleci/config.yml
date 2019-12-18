@@ -340,24 +340,23 @@ jobs:
       - run:
           name: "Install cypress"
           command: |
-            cd packages/__tests__/router/e2e/doc-example
+            cd test/doc-example
             npm i
       - run:
           name: "Install and build test app"
           command: |
-            cd packages/__tests__/router/e2e/doc-example/app
-            npm i
+            cd test/doc-example/app
             npm run build
       - run:
           name: "Serve test app in the background"
           background: true
           command: |
-            cd packages/__tests__/router/e2e/doc-example/app
+            cd test/doc-example/app
             npm run serve
       - run:
           name: "Run e2e tests"
           command: |
-            cd packages/__tests__/router/e2e/doc-example
+            cd test/doc-example
             npm run test
 
   e2e_cypress:
@@ -491,36 +490,18 @@ workflows:
          <<: *filter_ignore_develop_release
       #- e2e_cypress_doc_example:
       #    <<: *filter_ignore_develop_release
-      #- e2e_wdio:
-      #    <<: *filter_ignore_develop_release
-      #    name: jit-fuse-box-ts
-      #    path: "examples/jit-fuse-box-ts"
-      #    requires:
-      #      - lint_packages # not a real requirement but forces long-running jobs to go first
       - e2e_wdio:
           <<: *filter_ignore_develop_release
-          name: jit-webpack-ts
-          path: "examples/jit-webpack-ts"
+          name: jit-webpack-conventions-ts
+          path: "examples/jit-webpack-conventions-ts"
           requires:
             - lint_packages # not a real requirement but forces long-running jobs to go first
       - e2e_wdio:
           <<: *filter_ignore_develop_release
-          name: jit-parcel-ts
-          path: "examples/jit-parcel-ts"
+          name: jit-webpack-vanilla-ts
+          path: "examples/jit-webpack-vanilla-ts"
           requires:
             - lint_packages # not a real requirement but forces long-running jobs to go first
-      # - e2e_wdio:
-      #     <<: *filter_ignore_develop_release
-      #     name: jit-browserify-ts
-      #     path: "examples/jit-browserify-ts"
-      #     requires:
-      #       - lint_packages # not a real requirement but forces long-running jobs to go first
-      #- e2e_wdio:
-      #    <<: *filter_ignore_develop_release
-      #    name: jit-iife-inline
-      #    path: "examples/jit-iife-inline"
-      #    requires:
-      #      - lint_packages # not a real requirement but forces long-running jobs to go first
       - merge_and_dist:
           <<: *filter_only_master
           name: merge_and_dist_master
@@ -532,11 +513,8 @@ workflows:
             - e2e_browserstack
             - e2e_cypress
             #- e2e_cypress_doc_example
-            #- jit-fuse-box-ts
-            - jit-webpack-ts
-            #- jit-parcel-ts
-            #- jit-browserify-ts
-            #- jit-iife-inline
+            - jit-webpack-conventions-ts
+            - jit-webpack-vanilla-ts
           from: master
           to: develop
           channel: dev
@@ -553,11 +531,8 @@ workflows:
             - e2e_browserstack
             - e2e_cypress
             #- e2e_cypress_doc_example
-            #- jit-fuse-box-ts
-            - jit-webpack-ts
-            #- jit-parcel-ts
-            # -jit-browserify-ts
-            #- jit-iife-inline
+            - jit-webpack-conventions-ts
+            - jit-webpack-vanilla-ts
           from: master
           to: develop
           channel: dev
