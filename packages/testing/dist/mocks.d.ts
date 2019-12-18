@@ -1,6 +1,7 @@
 import { IContainer, IDisposable, IIndexable, IServiceLocator } from '@aurelia/kernel';
-import { ExpressionKind, IBinding, IConnectableBinding, IndexMap, IObserverLocator, IRenderContext, IScope, ISignaler, ISubscribable, LifecycleFlags, State } from '@aurelia/runtime';
+import { ExpressionKind, IBinding, IConnectableBinding, IndexMap, IObserverLocator, IScope, ISignaler, ISubscribable, LifecycleFlags, State } from '@aurelia/runtime';
 export declare class MockBinding implements IConnectableBinding {
+    interceptor: this;
     id: number;
     observerSlots: number;
     version: number;
@@ -73,7 +74,7 @@ export declare class MockValueConverter {
 export declare class MockContext {
     log: any[];
 }
-export declare type ExposedContext = IRenderContext & IDisposable & IContainer;
+export declare type ExposedContext = IContainer & IDisposable & IContainer;
 export declare class MockBrowserHistoryLocation {
     changeCallback?: (ev: PopStateEvent) => Promise<void>;
     private readonly states;

@@ -135,7 +135,7 @@
         rendering: true,
         binding: true,
         observation: true,
-        attaching: true,
+        beforeAttach: true,
         mounting: true,
         di: true,
         lifecycle: true,
@@ -230,7 +230,7 @@
             return flagsText(info);
         },
         render(info) {
-            return `${flagsText(info)},IDOM,IRenderContext,${ctorName(info, 3)}`;
+            return `${flagsText(info)},IDOM,IContainer,${ctorName(info, 3)}`;
         },
         addBinding(info) {
             return `${ctorName(info)},${ctorName(info, 1)}`;
@@ -257,7 +257,7 @@
                 case 'SetObserver':
                     return flagsText(info);
                 case 'SetterObserver':
-                case 'SelfObserver':
+                case 'BindableObserver':
                     return `${flagsText(info)},${ctorName(info, 1)},${primitive(info, 2)}`;
                 case 'ProxyObserver':
                     return ctorName(info);
@@ -475,7 +475,7 @@
         if (options.observation) {
             Object.assign(Processors, ObservationArgsProcessor);
         }
-        if (options.attaching) {
+        if (options.beforeAttach) {
             Object.assign(Processors, AttachingArgsProcessor);
         }
         if (options.mounting) {

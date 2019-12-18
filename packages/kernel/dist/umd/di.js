@@ -478,12 +478,6 @@
     function isClass(obj) {
         return obj.prototype !== void 0;
     }
-    const nextContainerId = (function () {
-        let id = 0;
-        return function () {
-            return ++id;
-        };
-    })();
     function isResourceKey(key) {
         return typeof key === 'string' && key.indexOf(':') > 0;
     }
@@ -491,16 +485,13 @@
     class Container {
         constructor(parent) {
             this.parent = parent;
-            this.id = nextContainerId();
             this.registerDepth = 0;
             if (parent === null) {
-                this.path = this.id.toString();
                 this.root = this;
                 this.resolvers = new Map();
                 this.resourceResolvers = Object.create(null);
             }
             else {
-                this.path = `${parent.path}.${this.id}`;
                 this.root = parent.root;
                 this.resolvers = new Map();
                 this.resourceResolvers = Object.assign(Object.create(null), this.root.resourceResolvers);
@@ -521,6 +512,9 @@
             let jj;
             for (let i = 0, ii = params.length; i < ii; ++i) {
                 current = params[i];
+                if (!functions_1.isObject(current)) {
+                    continue;
+                }
                 if (isRegistry(current)) {
                     current.register(this);
                 }
@@ -546,6 +540,9 @@
                     jj = keys.length;
                     for (; j < jj; ++j) {
                         value = current[keys[j]];
+                        if (!functions_1.isObject(value)) {
+                            continue;
+                        }
                         // note: we could remove this if-branch and call this.register directly
                         // - the extra check is just a perf tweak to create fewer unnecessary arrays by the spread operator
                         if (isRegistry(value)) {
