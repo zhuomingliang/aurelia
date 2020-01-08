@@ -11,15 +11,24 @@ import { Viewport, IViewportOptions } from './viewport';
 import { arrayRemove } from './utils';
 import { Collection } from './collection';
 
+/**
+ * @internal - Shouldn't be used directly
+ */
 export interface IFindViewportsResult {
   foundViewports: ViewportInstruction[];
   remainingInstructions: ViewportInstruction[];
 }
 
+/**
+ * @internal - Shouldn't be used directly
+ */
 export interface IScopeOwnerOptions {
   noHistory?: boolean;
 }
 
+/**
+ * @internal - Shouldn't be used directly
+ */
 export interface IScopeOwner {
   connectedScope: Scope;
   scope: Scope;
@@ -44,6 +53,9 @@ export interface IScopeOwner {
   getRoutes(): IRoute[] | null;
 }
 
+/**
+ * @internal - Shouldn't be used directly
+ */
 export class Scope {
   public id: string = '.';
   public scope: Scope;
