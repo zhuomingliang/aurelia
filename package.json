@@ -39,6 +39,7 @@
     "generate-tests:template-compiler.mutations": "ts-node -P tsconfig.json scripts/generate-tests/template-compiler.mutations.ts"
   },
   "dependencies": {
+    "@nativescript/core": "^6.3.2",
     "i18next": "^17.0.0",
     "jsdom": "^15.2.1",
     "loader-utils": "^1.2.3",
