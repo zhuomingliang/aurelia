@@ -24,6 +24,7 @@
     { "path": "runtime-html" },
     { "path": "runtime-html-browser" },
     { "path": "runtime-html-jsdom" },
+    { "path": "runtime-nativescript" },
     { "path": "store" },
     { "path": "testing" },
     { "path": "validation" },
