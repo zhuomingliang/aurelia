@@ -18,6 +18,7 @@
     "packages/jit-html",
     "packages/jit-html-browser",
     "packages/jit-html-jsdom",
+    "packages/jit-nativescript",
     "packages/kernel",
     "packages/plugin-conventions",
     "packages/plugin-gulp",

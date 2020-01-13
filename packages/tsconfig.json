@@ -13,6 +13,7 @@
     { "path": "jit-html" },
     { "path": "jit-html-browser" },
     { "path": "jit-html-jsdom" },
+    { "path": "jit-nativescript" },
     { "path": "kernel" },
     { "path": "plugin-conventions" },
     { "path": "plugin-gulp" },
