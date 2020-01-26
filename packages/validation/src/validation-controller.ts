@@ -2,7 +2,9 @@ import {
   DI,
   IContainer,
   Registration,
-  createResolver
+  createResolver,
+  IFactory,
+  Key
 } from '@aurelia/kernel';
 import {
   AccessKeyedExpression,
@@ -577,39 +579,52 @@ export interface IValidationControllerFactory {
 }
 export const IValidationControllerFactory = DI.createInterface<IValidationControllerFactory>("IValidationControllerFactory").noDefault();
 
-export class ValidationControllerFactory implements IValidationControllerFactory {
+export class ValidationControllerFactory implements /* IValidationControllerFactory,  */IFactory {
 
-  public constructor(
-    @IContainer private readonly container: IContainer,
-  ) { }
+  public Type: any = void 0;
+  // public constructor(
+  //   // @IContainer private readonly container: IContainer,
+  //   public readonly Type: any,
+  // ) { }
 
-  public create(validator?: IValidator): IValidationController {
-    const container = this.container;
+  public registerTransformer(_transformer: (instance: any) => any): boolean {
+    return false;
+  }
+  public construct(container: IContainer, _dynamicDependencies?: Key[] | undefined) {
     return new ValidationController(
-      validator ?? container.get<IValidator>(IValidator),
+      container.get<IValidator>(IValidator),
       container.get(IExpressionParser),
       container.get(IScheduler)
     );
   }
 
-  public createForCurrentScope(validator?: IValidator): IValidationController {
-    const controller = this.create(validator);
-    Registration.instance(IValidationController, controller).register(this.container);
-    return controller;
-  }
+  // public create(validator?: IValidator): IValidationController {
+  //   const container = this.container;
+  //   return new ValidationController(
+  //     validator ?? container.get<IValidator>(IValidator),
+  //     container.get(IExpressionParser),
+  //     container.get(IScheduler)
+  //   );
+  // }
+
+  // public createForCurrentScope(validator?: IValidator): IValidationController {
+  //   const controller = this.create(validator);
+  //   Registration.instance(IValidationController, controller).register(this.container);
+  //   return controller;
+  // }
 }
 
-export const forScope = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) => {
-  const controller = createValidationController(requestor);
-  Registration.instance(IValidationController, controller).register(requestor);
-  return controller;
-});
-export const transientOf = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) =>  createValidationController(requestor));
+// export const forScope = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) => {
+//   const controller = createValidationController(requestor);
+//   Registration.instance(IValidationController, controller).register(requestor);
+//   return controller;
+// });
+// export const transientOf = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) =>  createValidationController(requestor));
 
-function createValidationController(container: IContainer) {
-  return new ValidationController(
-    container.get<IValidator>(IValidator),
-    container.get(IExpressionParser),
-    container.get(IScheduler)
-  );
-}
+// function createValidationController(container: IContainer) {
+//   return new ValidationController(
+//     container.get<IValidator>(IValidator),
+//     container.get(IExpressionParser),
+//     container.get(IScheduler)
+//   );
+// }

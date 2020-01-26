@@ -1,9 +1,9 @@
-import { IContainer, PLATFORM, Registration } from '@aurelia/kernel';
+import { IContainer, PLATFORM, Registration, Protocol, Metadata } from '@aurelia/kernel';
 import { ICustomMessages, IValidationRules, ValidationMessageProvider, ValidationRules } from './rule-provider';
 import { IValidationMessageProvider } from './rules';
 import { ValidationErrorsCustomAttribute } from './subscribers/validation-errors-custom-attribute';
 import { IDefaultTrigger, ValidateBindingBehavior, ValidationTrigger } from './validate-binding-behavior';
-import { IValidationControllerFactory, ValidationControllerFactory } from './validation-controller';
+import { IValidationControllerFactory, ValidationControllerFactory, IValidationController } from './validation-controller';
 import { ValidationCustomizationOptions } from './validation-customization-options';
 import { IValidator, StandardValidator } from './validator';
 
@@ -16,6 +16,13 @@ function createConfiguration(optionsProvider: ValidationConfigurationProvider) {
       const options: ValidationCustomizationOptions = { ValidatorType: StandardValidator, CustomMessages: [], DefaultTrigger: ValidationTrigger.blur };
       optionsProvider(options);
 
+      const key = Protocol.annotation.keyFor('di:factory');
+      // let factory = Metadata.getOwn(key, Type);
+      // if (factory === void 0) {
+      Metadata.define(key, new ValidationControllerFactory(), IValidationController);
+      //   Protocol.annotation.appendTo(Type, key);
+      // }
+
       return container.register(
         Registration.callback(ICustomMessages, () => options.CustomMessages),
         Registration.callback(IDefaultTrigger, () => options.DefaultTrigger),
@@ -24,7 +31,7 @@ function createConfiguration(optionsProvider: ValidationConfigurationProvider) {
         Registration.transient(IValidationRules, ValidationRules),
         ValidateBindingBehavior,
         ValidationErrorsCustomAttribute,
-        Registration.singleton(IValidationControllerFactory, ValidationControllerFactory)
+        // Registration.singleton(IValidationControllerFactory, ValidationControllerFactory)
       );
     },
     customize(cb?: ValidationConfigurationProvider) {

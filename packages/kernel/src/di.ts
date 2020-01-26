@@ -439,6 +439,22 @@ export const optional = createResolver((key: any, handler: IContainer, requestor
   }
 });
 
+export const forScope = createResolver((key: any, handler: IContainer, requestor: IContainer) => {
+  const instance = createNewInstance(key, requestor);
+  Registration.instance(key, instance).register(requestor);
+  return instance;
+});
+
+export const newInstanceOf = createResolver((key: any, handler: IContainer, requestor: IContainer) => createNewInstance(key, requestor));
+
+function createNewInstance(key: any, requestor: IContainer) {
+  const factory = requestor.getFactory(key);
+  if (factory === null) {
+    throw new Error(`No factory registered for ${key}`);
+  }
+  return factory.construct(requestor);
+}
+
 /** @internal */
 export const enum ResolverStrategy {
   instance = 0,

@@ -23,6 +23,8 @@ export {
   Resolved,
   Transformer,
   createResolver,
+  newInstanceOf,
+  forScope
 } from './di';
 export {
   Class,

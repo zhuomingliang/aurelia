@@ -1,5 +1,6 @@
+import { forScope, newInstanceOf } from "@aurelia/kernel";
 import { bindable, customElement } from '@aurelia/runtime';
-import { forScope, IValidationController, transientOf } from '@aurelia/validation';
+import { IValidationController } from '@aurelia/validation';
 
 @customElement({
     name: 'sut-validation',
@@ -8,7 +9,7 @@ import { forScope, IValidationController, transientOf } from '@aurelia/validatio
 export class SutValidation {
     public constructor(
         @forScope(IValidationController) private readonly controller1: IValidationController,
-        @transientOf(IValidationController) private readonly controller2: IValidationController,
+        @newInstanceOf(IValidationController) private readonly controller2: IValidationController,
         @IValidationController private readonly controller3: IValidationController,
     ) {
         console.group(`sut-validation ctor`);
