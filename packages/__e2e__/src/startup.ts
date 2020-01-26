@@ -14,6 +14,7 @@ import { resources } from './plugins/translation-resources';
 import RelativeTimeFormat from 'relative-time-format';
 import * as deRt from 'relative-time-format/locale/de.json';
 import * as enRt from 'relative-time-format/locale/en.json';
+import { SutValidation, FooBar } from './plugins/sut-validation';
 RelativeTimeFormat.addLocale(enRt['default']);
 RelativeTimeFormat.addLocale(deRt['default']);
 Intl['RelativeTimeFormat'] = Intl['RelativeTimeFormat'] || RelativeTimeFormat;
@@ -44,7 +45,10 @@ Intl['RelativeTimeFormat'] = Intl['RelativeTimeFormat'] || RelativeTimeFormat;
       }),
       ValidationConfiguration,
       SutI18N,
-      CustomMessage
+      CustomMessage,
+
+      SutValidation,
+      FooBar
     );
   // au.container.register(SutI18N, CustomMessage, SutValidation);
   au.app({ host, component });

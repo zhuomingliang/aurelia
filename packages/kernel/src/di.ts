@@ -344,7 +344,7 @@ export const DI = {
 export const IContainer = DI.createInterface<IContainer>('IContainer').noDefault();
 export const IServiceLocator = IContainer as unknown as InterfaceSymbol<IServiceLocator>;
 
-function createResolver(getter: (key: any, handler: IContainer, requestor: IContainer) => any): (key: any) => any {
+export function createResolver(getter: (key: any, handler: IContainer, requestor: IContainer) => any): (key: any) => any {
   return function (key: any): ReturnType<typeof DI.inject> {
     const resolver: ReturnType<typeof DI.inject> & Partial<Pick<IResolver, 'resolve'>> = function (target: Injectable, property?: string | number, descriptor?: PropertyDescriptor | number): void {
       DI.inject(resolver)(target, property, descriptor);

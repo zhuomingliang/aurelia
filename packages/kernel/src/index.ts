@@ -22,6 +22,7 @@ export {
   InstanceProvider,
   Resolved,
   Transformer,
+  createResolver,
 } from './di';
 export {
   Class,

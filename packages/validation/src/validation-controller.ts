@@ -2,6 +2,7 @@ import {
   DI,
   IContainer,
   Registration,
+  createResolver
 } from '@aurelia/kernel';
 import {
   AccessKeyedExpression,
@@ -596,4 +597,19 @@ export class ValidationControllerFactory implements IValidationControllerFactory
     Registration.instance(IValidationController, controller).register(this.container);
     return controller;
   }
+}
+
+export const forScope = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) => {
+  const controller = createValidationController(requestor);
+  Registration.instance(IValidationController, controller).register(requestor);
+  return controller;
+});
+export const transientOf = createResolver((_key: typeof IValidationController, _handler: IContainer, requestor: IContainer) =>  createValidationController(requestor));
+
+function createValidationController(container: IContainer) {
+  return new ValidationController(
+    container.get<IValidator>(IValidator),
+    container.get(IExpressionParser),
+    container.get(IScheduler)
+  );
 }
