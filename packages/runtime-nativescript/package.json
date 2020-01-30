@@ -35,8 +35,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@aurelia/kernel": "0.6.0",
     "@aurelia/debug": "0.6.0",
+    "@aurelia/jit": "^0.6.0",
+    "@aurelia/kernel": "0.6.0",
     "@aurelia/runtime": "0.6.0",
     "@nativescript/core": "^6.3.2"
   },
