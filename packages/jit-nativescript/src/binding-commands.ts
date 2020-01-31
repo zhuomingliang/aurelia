@@ -1,2 +1,36 @@
-// Do we want any NS-specific binding commands? The html-specific ones are: .class, .style, .delegate, etc.
-// Possibly we need to just abstract the html ones a bit better so they can be reused, as there isn't any real html-specific logic in any of them. They're just connected to html-specific stuff, is all. The only real dependency is on the DOM typings.
+import {
+  bindingCommand,
+  BindingSymbol,
+  getTarget,
+  BindingCommandInstance,
+  PlainAttributeSymbol,
+} from '@aurelia/jit';
+import { BindingType, IsBindingBehavior, RefBindingInstruction } from '@aurelia/runtime';
+import {
+  NsAttributeInstruction,
+  NsTriggerBindingInstruction
+} from '@aurelia/runtime-nativescript';
+
+/**
+ * Trigger binding command. Compile attr with binding symbol with command `trigger` to `TriggerBindingInstruction`
+ */
+@bindingCommand('trigger')
+export class TriggerBindingCommand implements BindingCommandInstance {
+  public readonly bindingType: BindingType.TriggerCommand = BindingType.TriggerCommand;
+
+  public compile(binding: PlainAttributeSymbol | BindingSymbol): NsAttributeInstruction {
+    return new NsTriggerBindingInstruction(binding.expression as IsBindingBehavior, getTarget(binding, false));
+  }
+}
+
+/**
+ * Binding command to refer different targets (element, custom element/attribute view models, controller) afterAttach to an element
+ */
+@bindingCommand('ref')
+export class RefBindingCommand implements BindingCommandInstance {
+  public readonly bindingType: BindingType.IsProperty | BindingType.IgnoreCustomAttr = BindingType.IsProperty | BindingType.IgnoreCustomAttr;
+
+  public compile(binding: PlainAttributeSymbol | BindingSymbol): RefBindingInstruction {
+    return new RefBindingInstruction(binding.expression as IsBindingBehavior, getTarget(binding, false));
+  }
+}

@@ -25,73 +25,68 @@ import {
 import { Listener } from './binding/listener';
 import {
   NsTargetedInstructionType,
-  IAttributeBindingInstruction,
   IListenerBindingInstruction,
-  ISetAttributeInstruction,
-  IStylePropertyBindingInstruction,
   ITextBindingInstruction,
-  ISetClassAttributeInstruction,
-  ISetStyleAttributeInstruction
 } from './definitions';
 import { IEventManager } from './observation/event-manager';
 import { NsNode, NsView } from './dom';
 import { IIndexable, Metadata } from '@aurelia/kernel';
 
-@instructionRenderer(TargetedInstructionType.hydrateElement)
-/** @internal */
-export class CustomElementRenderer implements IInstructionRenderer {
+// @instructionRenderer(TargetedInstructionType.hydrateElement)
+// /** @internal */
+// export class CustomElementRenderer implements IInstructionRenderer {
 
-  public render(
-    flags: LifecycleFlags,
-    context: ICompiledRenderContext,
-    controller: IRenderableController,
-    target: NsNode,
-    instruction: IHydrateElementInstruction,
-    parts: PartialCustomElementDefinitionParts | undefined,
-  ): void {
-    parts = mergeParts(parts, instruction.parts);
+//   public render(
+//     flags: LifecycleFlags,
+//     context: ICompiledRenderContext,
+//     controller: IRenderableController,
+//     target: NsNode,
+//     instruction: IHydrateElementInstruction,
+//     parts: PartialCustomElementDefinitionParts | undefined,
+//   ): void {
+//     parts = mergeParts(parts, instruction.parts);
 
-    // this ns view is only a dummy view, and needs upgrade
-    // because our custom element could be anything
-    const nsView: NsView = target.createNsView();// this.nsViewResource.create(target as INodeInfo);
+//     // this ns view is only a dummy view, and needs upgrade
+//     // because our custom element could be anything
+//     const nsView: NsView = target.createNsView();// this.nsViewResource.create(target as INodeInfo);
 
-    const factory = context.getComponentFactory(
-      /* parentController */controller,
-      /* host             */nsView,
-      /* instruction      */instruction,
-      /* viewFactory      */void 0,
-      /* location         */target,
-    );
+//     const factory = context.getComponentFactory(
+//       /* parentController */controller,
+//       /* host             */nsView,
+//       /* instruction      */instruction,
+//       /* viewFactory      */void 0,
+//       /* location         */target,
+//     );
 
-    const key = CustomElement.keyFrom(instruction.res);
-    const component = factory.createComponent<ICustomElementViewModel<NsView>>(key);
+//     const key = CustomElement.keyFrom(instruction.res);
+//     const component = factory.createComponent<ICustomElementViewModel<NsView>>(key);
 
-    const lifecycle = context.get(ILifecycle);
-    const childController = Controller.forCustomElement(
-      /* viewModel       */component,
-      /* lifecycle       */lifecycle,
-      /* host            */nsView,
-      /* parentContainer */context,
-      /* parts           */parts,
-      /* flags           */flags,
-    );
+//     const lifecycle = context.get(ILifecycle);
+//     const childController = Controller.forCustomElement(
+//       /* viewModel       */component,
+//       /* lifecycle       */lifecycle,
+//       /* host            */nsView,
+//       /* parentContainer */context,
+//       /* parts           */parts,
+//       /* flags           */flags,
+//     );
 
-    flags = childController.flags;
-    Metadata.define(key, childController, target);
+//     flags = childController.flags;
+//     Metadata.define(key, childController, target);
 
-    context.renderInstructions(
-      /* flags        */flags,
-      /* instructions */instruction.instructions,
-      /* controller   */controller,
-      /* target       */childController,
-      /* parts        */parts,
-    );
+//     context.renderInstructions(
+//       /* flags        */flags,
+//       /* instructions */instruction.instructions,
+//       /* controller   */controller,
+//       /* target       */childController,
+//       /* parts        */parts,
+//     );
 
-    controller.addController(childController);
+//     controller.addController(childController);
 
-    factory.dispose();
-  }
-}
+//     factory.dispose();
+//   }
+// }
 
 @instructionRenderer(NsTargetedInstructionType.textBinding)
 /** @internal */

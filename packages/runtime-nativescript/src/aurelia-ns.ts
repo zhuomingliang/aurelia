@@ -1,22 +1,23 @@
 import {
   Aurelia as $RuntimeAurelia,
-  ISinglePageApp,
   CompositionRoot,
   ILifecycleTask,
+  ISinglePageApp
 } from '@aurelia/runtime';
 import {
-  NsNode
-} from './runtime';
-import {
-  Application
+  Application,
+  Frame,
+  Page
 } from '@nativescript/core';
+import {
+  NsNode
+} from './dom';
 
 export class Aurelia extends $RuntimeAurelia {
-  public app(config: ISinglePageApp<NsNode>): Omit<this, 'register' | 'app'> {
+  public app(config: ISinglePageApp<Page | Frame>): Omit<this, 'register' | 'app'> {
     const host = config.host;
     if (host === void 0) {
-      const node = config.host = new NsNode('Page');
-      node.createNsView();
+      config.host = new Page();
     }
     return super.app(config);
   }

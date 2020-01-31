@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { PartialCustomElementDefinition, TargetedInstructionType } from '@aurelia/runtime';
-import { NsNode } from '../runtime/dom';
-import { NsTargetedInstruction } from '../runtime/definitions';
+import { PartialCustomElementDefinition } from '@aurelia/runtime';
+import { NsNode, NsTargetedInstruction } from '@aurelia/runtime-nativescript';
 
 export const enum NodeType {
   Element = 1,

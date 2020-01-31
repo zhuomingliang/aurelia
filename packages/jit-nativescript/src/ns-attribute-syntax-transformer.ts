@@ -1,7 +1,7 @@
 import { AttrSyntax } from '@aurelia/jit';
 import { IContainer, IResolver, Registration } from '@aurelia/kernel';
 import { IAttrSyntaxTransformer } from './attribute-syntax-transformer';
-import { NsNode } from '../runtime/dom';
+import { NsNode } from '@aurelia/runtime-nativescript';
 
 export class NsAttrSyntaxTransformer implements IAttrSyntaxTransformer {
 

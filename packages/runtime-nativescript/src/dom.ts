@@ -12,12 +12,12 @@ import {
   IRenderLocation,
   CustomElement,
 } from '@aurelia/runtime';
-import { View } from '@nativescript/core';
-import { INsXmlParser } from '../jit/ns-xml-parser';
+import { View, LayoutBase } from '@nativescript/core';
+import { INsXmlParser } from './xml-parser.interfaces';
 import { NsViewRegistry } from './element-registry';
 
 // reexport for better hint from naming
-export type NsView = View;
+export type NsView = View & INode;
 
 export const enum SpecialNodeName {
   Comment = '#Comment',
@@ -40,11 +40,11 @@ export class NsDOM implements IDOM<NsNode> {
     @INsXmlParser private readonly parser: INsXmlParser
   ) {}
 
-  public createNodeSequence(fragment: NsNode): NSNodeSequence {
+  public createNodeSequence(fragment: NsNode): INodeSequence<any> {
     if (fragment === null) {
-      return new NSNodeSequence([]);
+      return new NsNodeSequence([]);
     }
-    return new NSNodeSequence(fragment.children);
+    return new NsNodeSequence(fragment.children);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -259,55 +259,61 @@ export { $DOM as DOM };
 // Might not need something NS-specific here. Probably should just copy paste the FragmentNodeSequence for starters?
 // See: packages\runtime-html\src\dom.ts (near the bottom)
 
-export class NSNodeSequence implements INodeSequence<NsNode> {
+export class NsNodeSequence implements INodeSequence<NsView> {
   public isMounted: boolean = false;
   public isLinked: boolean = false;
 
-  public firstChild: NsNode = (void 0)!;
-  public lastChild: NsNode = (void 0)!;
+  public firstChild: NsView = (void 0)!;
+  public lastChild: NsView = (void 0)!;
 
-  public next?: NSNodeSequence = void 0;
+  public next?: NsNodeSequence = void 0;
+  public childNodes: NsView[];
 
   public constructor(
-    public childNodes: NsNode[],
-  ) {}
-
-  public findTargets(): NsNode[] {
-    let targets: NsNode[] = [];
-    this.childNodes.forEach(child => {
-      targets = targets.concat(child.targets);
+    nsNodes: NsNode[],
+  ) {
+    let childNodes: NsView[] = [];
+    nsNodes.forEach(nsNode => {
+      childNodes = childNodes.concat(nsNode.targets.map(t => t.createNsView()));
     });
-    return targets;
+    this.childNodes = childNodes;
+  }
+
+  public findTargets(): NsView[] {
+    return this.childNodes;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public insertBefore(refNode: NsNode): void {
+  public insertBefore(refNode: NsView): void {
     throw new Error('Not implemented');
   }
 
-  public appendTo(parent: NsNode): void {
+  public appendTo(parent: NsView): void {
+    if (!(parent instanceof LayoutBase)) {
+      throw new Error('NsNodeSequence: Invalid parent to append to');
+    }
     for (const child of this.childNodes) {
-      parent.appendChild(child);
+      parent._addView(child);
     }
   }
 
   public remove(): void {
     for (const child of this.childNodes) {
-      child.remove();
+      child.parentNode._removeView(child);
     }
   }
 
   public addToLinked(): void {
-    throw new Error('Not implemented');
+    throw new Error('Not implemented: NsNodeSequence: addToLinked');
   }
 
   public unlink(): void {
-    throw new Error('Not implemented');
+    throw new Error('Not implemented: NsNodeSequence: unlink');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public link(next: NSNodeSequence | IRenderLocation<NsNode> | undefined): void {
-    throw new Error('Not implemented');
+  public link(next: NsNodeSequence | IRenderLocation<NsNode> | undefined): void {
+    throw new Error('Not implemented: NsNodeSequence.link');
   }
 }
 

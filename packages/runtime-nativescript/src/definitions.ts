@@ -24,11 +24,7 @@ export type NsNodeInstruction =
 export type NsAttributeInstruction =
   AttributeInstruction |
   IListenerBindingInstruction |
-  IAttributeBindingInstruction |
-  IStylePropertyBindingInstruction |
-  ISetAttributeInstruction |
-  ISetClassAttributeInstruction |
-  ISetStyleAttributeInstruction;
+  IAttributeBindingInstruction;
 
 export type NsTargetedInstruction = NsNodeInstruction | NsAttributeInstruction;
 // TODO: further improve specificity and integrate with the definitions;
@@ -50,28 +46,6 @@ export interface IListenerBindingInstruction extends ITargetedInstruction {
   to: string;
   strategy: DelegationStrategy;
   preventDefault: boolean;
-}
-
-export interface IStylePropertyBindingInstruction extends ITargetedInstruction {
-  type: NsTargetedInstructionType.stylePropertyBinding;
-  from: string | IsBindingBehavior;
-  to: string;
-}
-
-export interface ISetAttributeInstruction extends ITargetedInstruction {
-  type: NsTargetedInstructionType.setAttribute;
-  value: string;
-  to: string;
-}
-
-export interface ISetClassAttributeInstruction extends ITargetedInstruction {
-  type: NsTargetedInstructionType.setClassAttribute;
-  value: string;
-}
-
-export interface ISetStyleAttributeInstruction extends ITargetedInstruction {
-  type: NsTargetedInstructionType.setStyleAttribute;
-  value: string;
 }
 
 export interface IAttributeBindingInstruction extends ITargetedInstruction {

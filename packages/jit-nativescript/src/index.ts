@@ -1,10 +1,27 @@
 export {
+  IAttrSyntaxTransformer
+} from './attribute-syntax-transformer';
+export {
+  TriggerBindingCommand,
+} from './binding-commands';
+export {
+  ITemplateCompilerRegistration,
+  ITemplateElementFactoryRegistration,
+  IAttrSyntaxTransformerRegistation,
+
   DefaultComponents,
+
+  TriggerBindingCommandRegistration,
 
   DefaultBindingLanguage,
 
-  JitNativeScriptConfiguration
+  JitNsConfiguration
 } from './configuration';
+// export {
+//   stringifyDOM,
+//   stringifyInstructions,
+//   stringifyTemplateDefinition
+// } from './debugging';
 export {
   TemplateBinder,
 } from './template-binder';

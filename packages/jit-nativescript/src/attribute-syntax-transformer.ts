@@ -1,6 +1,6 @@
 import { AttrSyntax } from '@aurelia/jit';
 import { DI } from '@aurelia/kernel';
-import { NsNode } from '../runtime/dom';
+import { NsNode } from '@aurelia/runtime-nativescript';
 
 export interface IAttrSyntaxTransformer {
   transform(node: NsNode, attrSyntax: AttrSyntax): void;

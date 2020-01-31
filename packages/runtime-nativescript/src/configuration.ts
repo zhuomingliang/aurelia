@@ -3,9 +3,13 @@ import { RuntimeConfiguration } from '@aurelia/runtime';
 import {
   ListenerBindingRenderer,
   TextBindingRenderer,
-} from './ns-renderer';
+} from './renderers';
 import { TargetAccessorLocator, TargetObserverLocator } from './observation/observer-locator';
-import { NsProjectorLocator } from './projectors';
+import { NsProjectorLocator } from './implementation/projectors';
+
+import {
+  NsXmlParser,
+} from './implementation/xml-parser';
 
 export const IProjectorLocatorRegistration = NsProjectorLocator as IRegistry;
 export const ITargetAccessorLocatorRegistration = TargetAccessorLocator as IRegistry;
@@ -22,6 +26,10 @@ export const DefaultComponents = [
   IProjectorLocatorRegistration,
   ITargetAccessorLocatorRegistration,
   ITargetObserverLocatorRegistration,
+];
+
+export const DefaultImplementations = [
+  NsXmlParser,
 ];
 
 /**
@@ -63,6 +71,7 @@ export const RuntimeNsConfiguration = {
     return RuntimeConfiguration
       .register(container)
       .register(
+        ...DefaultImplementations,
         ...DefaultComponents,
         ...DefaultResources,
         ...DefaultRenderers

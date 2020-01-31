@@ -1,21 +1,16 @@
 import { XmlParser, ParserEventType } from '@nativescript/core';
-import { NsNode } from '../runtime/dom';
-import { DI } from '@aurelia/kernel';
-
-export interface INsXmlParser {
-  parse(xml: string): NsNode;
-  parseInto<TNode extends NsNode = NsNode>(node: TNode, xml: string): TNode;
-}
-export const INsXmlParser = DI.createInterface<INsXmlParser>('INsXmlParser').withDefault(x => x.singleton(NsXmlParser));
+import { DI, IContainer, Registration } from '@aurelia/kernel';
+import { NsNode } from '../dom';
+import { INsXmlParser } from '../xml-parser.interfaces';
 
 export class NsXmlParser {
 
+  public static register(container: IContainer): void {
+    Registration.singleton(INsXmlParser, this).register(container);
+  }
+
   public parse(xml: string): NsNode {
-    const rootNode = NsNode.template();
-
-    this.parseInto(rootNode, xml);
-
-    return rootNode;
+    return this.parseInto(NsNode.template(), xml);
   }
 
   public parseInto(node: NsNode, xml: string): NsNode {
