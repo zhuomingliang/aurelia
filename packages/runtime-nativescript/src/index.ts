@@ -33,7 +33,7 @@ export {
 
 export {
   ListenerBindingRenderer,
-  TextBindingRenderer,
+  NsTextBindingRenderer,
 } from './renderers';
 
 export {

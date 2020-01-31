@@ -2,7 +2,7 @@ import { DI, IContainer, IRegistry } from '@aurelia/kernel';
 import { RuntimeConfiguration } from '@aurelia/runtime';
 import {
   ListenerBindingRenderer,
-  TextBindingRenderer,
+  NsTextBindingRenderer,
 } from './renderers';
 import { TargetAccessorLocator, TargetObserverLocator } from './observation/observer-locator';
 import { NsProjectorLocator } from './implementation/projectors';
@@ -42,7 +42,7 @@ export const DefaultResources = [
 ];
 
 export const ListenerBindingRendererRegistration = ListenerBindingRenderer as unknown as IRegistry;
-export const TextBindingRendererRegistration = TextBindingRenderer as unknown as IRegistry;
+export const TextBindingRendererRegistration = NsTextBindingRenderer as unknown as IRegistry;
 
 /**
  * Default NS-specfic (but environment-agnostic) renderers for:

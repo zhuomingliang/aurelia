@@ -90,7 +90,7 @@ import { IIndexable, Metadata } from '@aurelia/kernel';
 
 @instructionRenderer(NsTargetedInstructionType.textBinding)
 /** @internal */
-export class TextBindingRenderer implements IInstructionRenderer {
+export class NsTextBindingRenderer implements IInstructionRenderer {
   public constructor(
     @IExpressionParser private readonly parser: IExpressionParser,
     @IObserverLocator private readonly observerLocator: IObserverLocator,
