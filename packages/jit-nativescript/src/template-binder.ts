@@ -685,15 +685,19 @@ export class TemplateBinder {
         manifest.plainAttributes.push(new PlainAttributeSymbol(attrSyntax, command, expr));
         manifest.isTarget = true;
       }
-    } else if (expr != null) {
-      // either a binding command, an interpolation, or a ref
+    } else {
       manifest.plainAttributes.push(new PlainAttributeSymbol(attrSyntax, command, expr));
       manifest.isTarget = true;
-    } else if (manifest === surrogate) {
-      // any attributes, even if they are plain (no command/interpolation etc), should be added if they
-      // are on the surrogate element
-      manifest.plainAttributes.push(new PlainAttributeSymbol(attrSyntax, command, expr));
     }
+    // else if (expr != null) {
+    //   // either a binding command, an interpolation, or a ref
+    //   manifest.plainAttributes.push(new PlainAttributeSymbol(attrSyntax, command, expr));
+    //   manifest.isTarget = true;
+    // } else if (manifest === surrogate) {
+    //   // any attributes, even if they are plain (no command/interpolation etc), should be added if they
+    //   // are on the surrogate element
+    //   manifest.plainAttributes.push(new PlainAttributeSymbol(attrSyntax, command, expr));
+    // }
 
     if (command == null && expr != null) {
       // if it's an interpolation, clear the attribute value

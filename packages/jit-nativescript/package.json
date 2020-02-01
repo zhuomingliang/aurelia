@@ -35,10 +35,10 @@
     "access": "public"
   },
   "dependencies": {
+    "@aurelia/jit": "0.6.0",
     "@aurelia/kernel": "0.6.0",
     "@aurelia/runtime": "0.6.0",
-    "@aurelia/runtime-nativescript": "0.6.0",
-    "@aurelia/jit": "0.6.0",
+    "@aurelia/runtime-nativescript": "file:../runtime-nativescript",
     "@nativescript/core": "^6.3.2"
   },
   "devDependencies": {

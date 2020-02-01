@@ -339,7 +339,6 @@ export class TemplateCompiler implements ITemplateCompiler {
 
       if (symbol.expression === null) {
         const attrRawValue = syntax.rawValue;
-
         // if (isOnSurrogate) {
         //   switch (syntax.target) {
         //     case 'class':
