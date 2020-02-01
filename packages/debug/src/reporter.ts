@@ -239,6 +239,10 @@ const codeLookup: Record<string, IMessageInfo> = {
     level: LogLevel.warn,
     message: `Property '%s' is being dirty-checked.`
   },
+  1000: {
+    level: LogLevel.error,
+    message: `Method '%s' not implemented.`
+  },
   2000: {
     level: LogLevel.error,
     message: 'Router has not been activated.'
