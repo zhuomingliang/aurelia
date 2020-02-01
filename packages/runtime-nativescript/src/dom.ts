@@ -12,9 +12,11 @@ import {
   IRenderLocation,
   CustomElement,
 } from '@aurelia/runtime';
-import { View, LayoutBase } from '@nativescript/core';
+import { View, LayoutBase, Page, ContentView } from '@nativescript/core';
 import { INsXmlParser } from './xml-parser.interfaces';
 import { NsViewRegistry } from './element-registry';
+import { NsEventHandler } from './observation/event-manager';
+import { appendManyChildViews, appendChildView } from './ns-view-utils';
 
 // reexport for better hint from naming
 export type NsView = View & INode;
@@ -32,13 +34,15 @@ const effectiveParentNodeOverrides = new WeakMap<NsNode, NsNode>();
 
 export class NsDOM implements IDOM<NsNode> {
 
-  public static register(container: IContainer): IResolver<IDOM> {
-    return Registration.alias(IDOM, this).register(container);
+  public static register(container: IContainer): IResolver<IDOM<NsNode>> {
+    return Registration.singleton(IDOM, this).register(container);
   }
 
   public constructor(
     @INsXmlParser private readonly parser: INsXmlParser
-  ) {}
+  ) {
+    DOM.initialize(this as unknown as IDOM<INode>);
+  }
 
   public createNodeSequence(fragment: NsNode): INodeSequence<any> {
     if (fragment === null) {
@@ -49,6 +53,11 @@ export class NsDOM implements IDOM<NsNode> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public addEventListener(eventName: string, subscriber: unknown, publisher?: unknown, options?: unknown): void {
+    if (publisher instanceof View) {
+      publisher.on(eventName, subscriber as NsEventHandler);
+      return;
+    }
+    console.error('Not implemented: addEventListener', { eventName, subscriber, publisher, options });
     throw new Error('Not implemented: addEventListener');
   }
 
@@ -230,7 +239,9 @@ export class NsDOM implements IDOM<NsNode> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public removeEventListener(eventName: string, subscriber: unknown, publisher?: unknown, options?: unknown): void {
-    throw new Error('Not implemented: removeEventListener');
+    if (publisher instanceof View) {
+      publisher.off(eventName, subscriber as NsEventHandler);
+    }
   }
 
   public setAttribute(node: NsNode, name: string, value: unknown): void {
@@ -239,12 +250,13 @@ export class NsDOM implements IDOM<NsNode> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public createCustomEvent(eventType: string, options?: unknown): unknown {
-    throw new Error('Not implemented: createCustomEvent');
+    console.error('Not implemented: NsDOM: createCustomEvent');
+    return {};
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public dispatchEvent(evt: unknown): void {
-    throw new Error('Not implemented: dispatchEvent');
+    console.error('Not implemented: NsDOM: dispatchEvent');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -252,9 +264,6 @@ export class NsDOM implements IDOM<NsNode> {
     throw new Error('Not implemented: createNodeObserver');
   }
 }
-
-const $DOM = DOM as unknown as NsDOM;
-export { $DOM as DOM };
 
 // Might not need something NS-specific here. Probably should just copy paste the FragmentNodeSequence for starters?
 // See: packages\runtime-html\src\dom.ts (near the bottom)
@@ -270,17 +279,20 @@ export class NsNodeSequence implements INodeSequence<NsView> {
   public childNodes: NsView[];
 
   public constructor(
-    nsNodes: NsNode[],
+    private readonly nsNodes: NsNode[],
   ) {
-    let childNodes: NsView[] = [];
-    nsNodes.forEach(nsNode => {
-      childNodes = childNodes.concat(nsNode.targets.map(t => t.createNsView()));
+    let childNodes: NsView[] = nsNodes.map(nsNode => {
+      return nsNode.createNsView(true);
     });
     this.childNodes = childNodes;
   }
 
   public findTargets(): NsView[] {
-    return this.childNodes;
+    let targets: NsView[] = [];
+    this.nsNodes.forEach(nsNode => {
+      targets = targets.concat(nsNode.targets.map(t => t.view!));
+    });
+    return targets;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -289,12 +301,7 @@ export class NsNodeSequence implements INodeSequence<NsView> {
   }
 
   public appendTo(parent: NsView): void {
-    if (!(parent instanceof LayoutBase)) {
-      throw new Error('NsNodeSequence: Invalid parent to append to');
-    }
-    for (const child of this.childNodes) {
-      parent._addView(child);
-    }
+    appendManyChildViews(parent, this.childNodes);
   }
 
   public remove(): void {
@@ -562,13 +569,18 @@ export class NsNode implements INode {
     return curr;
   }
 
-  public createNsView(): NsView {
+  public createNsView(deep?: boolean): NsView {
     if (this.view !== void 0) {
       throw new Error('Invalid createNsView() call. NsView already exists.');
     }
     const view = NsViewRegistry.create(this);
     this.view = view;
     nsView2NsNodeMap.set(view, this);
+    if (deep) {
+      this.childNodes.forEach(node => {
+        appendChildView(view, node.createNsView(deep));
+      });
+    }
     return view;
   }
 }
