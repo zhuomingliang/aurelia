@@ -429,7 +429,7 @@ export class NsNode implements INode {
     const allParentChildren = parent.children;
     const index = allParentChildren.indexOf(this);
     // next-sibling-able
-    if (index < allParentChildren.length - 2) {
+    if (index < allParentChildren.length - 1) {
       return allParentChildren[index + 1];
     }
     return null;
