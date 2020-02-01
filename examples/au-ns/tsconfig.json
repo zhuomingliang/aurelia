@@ -1,32 +1,45 @@
 {
     "compilerOptions": {
-        "module": "commonjs",
-        "target": "es5",
-        "experimentalDecorators": true,
-        "emitDecoratorMetadata": true,
-        "noEmitHelpers": true,
-        "noEmitOnError": true,
-        "skipLibCheck": true,
-        "lib": [
-            "es6",
-            "dom"
-        ],
-        "baseUrl": ".",
-        "paths": {
-            "~/*": [
-                "app/*"
-            ],
-            "*": [
-                "./node_modules/*"
-            ],
-            "@aurelia/debug": [
-                "../../packages/debug"
-            ],
-            "@aurelia/jit-nativescript": [
-                "../../packages/jit-nativescript"
-            ]
-        }
+      "target": "esnext",
+      "module": "esnext",
+      "strict": true,
+      "importHelpers": true,
+      "noEmitHelpers": true,
+      "moduleResolution": "node",
+      "experimentalDecorators": true,
+      "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+      "resolveJsonModule": true,
+      "emitDecoratorMetadata": true,
+      "sourceMap": true,
+      "skipLibCheck": true,
+      "baseUrl": ".",
+      "types": [
+        "node"
+      ],
+      "lib": [
+          "es6",
+          "dom"
+      ],
+      "paths": {
+          "~/*": [
+              "app/*"
+          ],
+          "*": [
+              "./node_modules/*"
+          ],
+          "@aurelia/debug": [
+              "../../packages/debug"
+          ],
+          "@aurelia/jit-nativescript": [
+              "../../packages/jit-nativescript"
+          ]
+      }
     },
+    "include": [
+      "app",
+      "types/**/*.d.ts"
+    ],
     "exclude": [
         "node_modules",
         "platforms"

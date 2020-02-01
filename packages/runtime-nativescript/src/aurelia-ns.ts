@@ -16,7 +16,7 @@ import {
 export class Aurelia extends $RuntimeAurelia {
   public app(config: ISinglePageApp<Page | Frame>): Omit<this, 'register' | 'app'> {
     const host = config.host;
-    if (host === void 0) {
+    if (host === void 0 || host === null) {
       config.host = new Page();
     }
     return super.app(config);
@@ -26,7 +26,14 @@ export class Aurelia extends $RuntimeAurelia {
     const start = super.start();
     Application.run({
       create: () => {
-        return root.host;
+        const rootFrame = new Frame();
+        rootFrame.id = 'app-root-frame';
+        const page = root.host;
+        rootFrame.navigate({
+            create: () => page
+        });
+
+        return rootFrame;
       }
     });
     // any thing after application.run won't be executed on IOS

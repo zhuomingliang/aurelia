@@ -1,6 +1,6 @@
 /* eslint-disable eqeqeq, @typescript-eslint/no-unused-vars */
 import { NsView, NsNode } from './dom';
-import { Label, Page, Button, TextField, ListView, StackLayout, TabView, Progress } from '@nativescript/core';
+import { Label, Page, Button, TextField, ListView, StackLayout, TabView, Progress, Frame } from '@nativescript/core';
 
 export type NsViewCreator = (node: NsNode | null) => NsView;
 
@@ -52,4 +52,7 @@ NsViewRegistry
   })
   .register('MyListView', nsNode => {
     return new ListView();
+  })
+  .register('Frame', nsNode => {
+    return new Frame();
   });
