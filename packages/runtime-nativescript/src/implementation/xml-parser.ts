@@ -19,11 +19,11 @@ export class NsXmlParser {
     new XmlParser(event => {
       switch (event.eventType) {
         case ParserEventType.StartElement: {
-          const viewVNode = new NsNode(event.elementName!);
-          viewVNode.attributes = { ...event.attributes as Record<string, string> };
+          const currentNode = new NsNode(event.elementName!);
+          currentNode.attributes = { ...event.attributes as Record<string, string> };
 
-          node.appendChild(viewVNode);
-          node = viewVNode;
+          node.appendChild(currentNode);
+          node = currentNode;
           break;
         }
         case ParserEventType.EndElement: {

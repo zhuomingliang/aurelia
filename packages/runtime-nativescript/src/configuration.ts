@@ -11,6 +11,12 @@ import {
   NsXmlParser,
 } from './implementation/xml-parser';
 
+import {
+  IDOMInitializerRegistration,
+  INsDOMSchedulerRegistration
+} from './initializer/initializer'
+import { NsDOM } from './dom';
+
 export const IProjectorLocatorRegistration = NsProjectorLocator as IRegistry;
 export const ITargetAccessorLocatorRegistration = TargetAccessorLocator as IRegistry;
 export const ITargetObserverLocatorRegistration = TargetObserverLocator as IRegistry;
@@ -29,7 +35,10 @@ export const DefaultComponents = [
 ];
 
 export const DefaultImplementations = [
+  NsDOM,
   NsXmlParser,
+  IDOMInitializerRegistration,
+  INsDOMSchedulerRegistration,
 ];
 
 /**

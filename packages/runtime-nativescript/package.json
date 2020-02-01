@@ -42,7 +42,7 @@
     "@nativescript/core": "^6.3.2"
   },
   "devDependencies": {
-    "@types/node": "^12.12.21",
+    "@types/node": "^12.12.26",
     "tslib": "^1.10.0",
     "typescript": "^3.7.4"
   }

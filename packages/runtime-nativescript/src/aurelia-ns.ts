@@ -10,7 +10,7 @@ import {
   Page
 } from '@nativescript/core';
 import {
-  NsNode
+  NsView
 } from './dom';
 
 export class Aurelia extends $RuntimeAurelia {
@@ -22,11 +22,11 @@ export class Aurelia extends $RuntimeAurelia {
     return super.app(config);
   }
 
-  public start(root: CompositionRoot<NsNode> | undefined = this['next']): ILifecycleTask {
+  public start(root: CompositionRoot<NsView> | undefined = this['next']): ILifecycleTask {
     const start = super.start();
     Application.run({
       create: () => {
-        return root.host.view!;
+        return root.host;
       }
     });
     // any thing after application.run won't be executed on IOS
