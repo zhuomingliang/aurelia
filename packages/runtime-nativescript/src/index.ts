@@ -49,3 +49,8 @@ export {
   NsViewRegistry,
   NsViewCreator,
 } from './element-registry';
+
+export {
+  IViewComposer,
+  ViewComposer,
+} from './view-composer';

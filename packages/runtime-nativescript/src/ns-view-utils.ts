@@ -1,7 +1,7 @@
 import { NsView } from './dom';
 import { Page, LayoutBase } from '@nativescript/core';
 
-export function appendManyChildViews(parent: NsView, children: NsView[]): NsView[] {
+export function appendManyChildViews(parent: NsView, children: ArrayLike<NsView>): ArrayLike<NsView> {
   if (parent instanceof Page) {
     if (children.length > 0) {
       if (children.length > 1) {
@@ -11,11 +11,13 @@ export function appendManyChildViews(parent: NsView, children: NsView[]): NsView
       parent.content = children[0]
     }
   } else if (parent instanceof LayoutBase) {
-    for (const child of children) {
+    for (let i = 0, ii = children.length; ii > i; ++i) {
+      const child = children[i];
       parent.addChild(child);
     }
   } else {
-    for (const child of children) {
+    for (let i = 0, ii = children.length; ii > i; ++i) {
+      const child = children[i];
       parent._addView(child);
     }
   }

@@ -16,6 +16,7 @@ import {
   INsDOMSchedulerRegistration
 } from './initializer/initializer'
 import { NsDOM } from './dom';
+import { ViewComposer } from './view-composer';
 
 export const IProjectorLocatorRegistration = NsProjectorLocator as IRegistry;
 export const ITargetAccessorLocatorRegistration = TargetAccessorLocator as IRegistry;
@@ -37,6 +38,7 @@ export const DefaultComponents = [
 export const DefaultImplementations = [
   NsDOM,
   NsXmlParser,
+  ViewComposer,
   IDOMInitializerRegistration,
   INsDOMSchedulerRegistration,
 ];

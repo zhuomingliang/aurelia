@@ -278,12 +278,19 @@ export class NsNodeSequence implements INodeSequence<NsView> {
   public next?: NsNodeSequence = void 0;
   public childNodes: NsView[];
 
+  private readonly nsNodes: NsNode[];
+
   public constructor(
-    private readonly nsNodes: NsNode[],
+    nsNodes: NsNode[],
   ) {
+    const cloneIsTarget = (newNode: NsNode, originalNode: NsNode) => {
+      newNode.isTarget = originalNode.isTarget;
+    }
+    nsNodes = nsNodes.map(nsNode => nsNode.cloneNode(true, cloneIsTarget));
     let childNodes: NsView[] = nsNodes.map(nsNode => {
-      return nsNode.createNsView(true);
+      return nsNode.render(true);
     });
+    this.nsNodes = nsNodes;
     this.childNodes = childNodes;
   }
 
@@ -522,13 +529,17 @@ export class NsNode implements INode {
     this.parentNode?.removeChild(this);
   }
 
-  public cloneNode(deep?: boolean): NsNode {
+  public cloneNode(deep?: boolean, eachNodeCallback?: (newNode: NsNode, originalNode: NsNode) => void): NsNode {
     const root = new NsNode(this.nodeName);
     root.attributes = this.attributes === void 0 ? void 0 : Object.assign(this.attributes);
+    root.text = this.text;
     if (deep) {
       this.children.forEach(child => {
-        root.appendChild(child.cloneNode(deep));
+        root.appendChild(child.cloneNode(deep, eachNodeCallback));
       });
+    }
+    if (eachNodeCallback !== void 0) {
+      eachNodeCallback(root, this);
     }
     return root;
   }
@@ -569,16 +580,17 @@ export class NsNode implements INode {
     return curr;
   }
 
-  public createNsView(deep?: boolean): NsView {
+  public render(deep?: boolean): NsView {
+    // idempotent
     if (this.view !== void 0) {
-      throw new Error('Invalid createNsView() call. NsView already exists.');
+      return this.view;
     }
     const view = NsViewRegistry.create(this);
     this.view = view;
     nsView2NsNodeMap.set(view, this);
     if (deep) {
       this.childNodes.forEach(node => {
-        appendChildView(view, node.createNsView(deep));
+        appendChildView(view, node.render(deep));
       });
     }
     return view;
