@@ -160,6 +160,11 @@ module.exports = env => {
                         },
                         enforce: true,
                     },
+                    commons: {
+                        name: 'aurelia',
+                        chunks: 'all',
+                        test: /(?:packages\/(?:runtime-nativescript|runtime|jit-nativescript|jit|kernel|debug))|/
+                    }
                 }
             },
             minimize: !!uglify,
