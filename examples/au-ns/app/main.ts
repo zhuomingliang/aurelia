@@ -1,8 +1,5 @@
 import { Aurelia, RuntimeNsConfiguration } from '@aurelia/runtime-nativescript'
-
-// app.run({ moduleName: "app-root" });
-import { DI } from '@aurelia/kernel';
-import { CustomElement, INode } from '@aurelia/runtime';
+import { CustomElement } from '@aurelia/runtime';
 import { DebugConfiguration } from '@aurelia/debug';
 import { Page, Frame } from '@nativescript/core';
 import { JitNsConfiguration } from '@aurelia/jit-nativescript';
@@ -19,7 +16,7 @@ try {
       JitNsConfiguration,
     )
     .app({
-      host: null, // new Page(),
+      host: null!, // new Page(),
       component: CustomElement.define({
         name: 'MyApp',
         template
