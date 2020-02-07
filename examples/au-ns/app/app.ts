@@ -7,6 +7,12 @@ import { inject } from '@aurelia/kernel';
 @inject(INode, IViewComposer)
 export default class App {
 
+  tabs: any[] = [
+    { tab: 'Home' },
+    { tab: 'Contact' },
+    { tab: 'Details' }
+  ]
+
   constructor(
     private readonly view: Page,
     private readonly viewComposer: IViewComposer
@@ -14,21 +20,13 @@ export default class App {
     if (!(view instanceof Page)) {
       throw new Error('DI should work beautifully');
     }
+    debugger;
   }
 
   onTap(e: GestureEventData) {
     const frame = this.view.frame;
     frame.navigate({
-      create:  () => {
-        try {
-          const page = this.viewComposer.compose(Home, Page);
-          page.id = 'Some___ID';
-          return page;
-        } catch (ex) {
-          console.error(ex);
-          throw ex;
-        }
-      }
+      create:  () => this.viewComposer.compose(Home, Page)
     });
   }
 }

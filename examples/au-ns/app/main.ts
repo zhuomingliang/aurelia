@@ -7,7 +7,6 @@ import { JitNsConfiguration } from '@aurelia/jit-nativescript';
 import App from './app';
 import template from './app.html';
 
-debugger;
 try {
   new Aurelia()
     .register(

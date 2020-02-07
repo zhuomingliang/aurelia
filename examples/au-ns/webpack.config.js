@@ -162,8 +162,11 @@ module.exports = env => {
                     },
                     commons: {
                         name: 'aurelia',
-                        chunks: 'all',
-                        test: /(?:packages\/(?:runtime-nativescript|runtime|jit-nativescript|jit|kernel|debug))|/
+                        test: /(?:packages[\\/](?:runtime-nativescript|runtime|jit-nativescript|jit|kernel|debug))|/
+                    },
+                    app: {
+                        name: 'app',
+                        test: /(?:app)[\\/].*\.ts/
                     }
                 }
             },
