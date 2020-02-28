@@ -17,7 +17,9 @@ import {
   TabStripItem,
   TabContentItem,
   GridLayout,
-  AbsoluteLayout
+  AbsoluteLayout,
+  ScrollView,
+  ContentView,
 } from '@nativescript/core';
 
 
@@ -38,37 +40,32 @@ export const NsViewRegistry = new class {
     const name = typeof nameOrNode === 'string' ? nameOrNode : nameOrNode.nodeName;
     const handler = this.$registry.get(name);
     if (handler == null) {
-      throw new Error(`Trying to create unknown element with name: ${String(name)}`);
+      throw new Error(`Trying to create unknown element with name: ${name}`);
     }
     return handler(typeof nameOrNode === 'string' ? null : nameOrNode);
   }
 }();
 
 NsViewRegistry
-  .register('Label', nsNode => {
-    return new Label();
-  })
-  .register('Page', nsNode => {
-    return new Page();
-  })
-  .register('Progress', nsNode => {
-    return new Progress();
-  })
-  .register('Button', nsNode => {
-    return new Button();
-  })
-  .register('TextField', nsNode => {
-    return new TextField();
-  })
+  .register('Frame', nsNode => new Frame())
+  .register('Page', nsNode => new Page())
+
+  // comment node
+  .register('au-m', nsNode => new ContentView())
+
+  .register('Label', nsNode => new Label())
+  .register('Progress', nsNode => new Progress())
+  .register('Button', nsNode => new Button())
+  .register('TextField', nsNode => new TextField())
   
   .register('StackLayout', nsNode => new StackLayout())
   .register('GridLayout', nsNode => new GridLayout())
   .register('AbsoluteLayout', nsNode => new AbsoluteLayout())
 
+  .register('ScrollView', nsNode => new ScrollView())
   .register('ListView', nsNode => {
     return new ListView();
   })
-  .register('Frame', nsNode => new Frame())
   // there are 2 kinds of tab components in NS
   // 1 is TabView, which is basically Tab "Panel" only component
   //        this comes with different way of navigation on different OS

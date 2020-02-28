@@ -3,6 +3,7 @@ import {
   IContainer,
   IResolver,
   Registration,
+  IIndexable,
 } from '@aurelia/kernel';
 import {
   DOM,
@@ -16,7 +17,7 @@ import { View, LayoutBase, Page, ContentView } from '@nativescript/core';
 import { INsXmlParser } from './xml-parser.interfaces';
 import { NsViewRegistry } from './element-registry';
 import { NsEventHandler } from './observation/event-manager';
-import { appendManyChildViews, appendChildView } from './ns-view-utils';
+import { appendManyChildViews, appendChildView, replaceView, insertBefore, insertManyViewsBefore } from './ns-view-utils';
 
 // reexport for better hint from naming
 export type NsView = View & INode;
@@ -78,18 +79,32 @@ export class NsDOM implements IDOM<NsNode> {
       throw new Error('Cannot convert to render location. Not attached to any parent node');
     }
 
-    const locationEnd = NsNode.comment('au-end');
-    const locationStart = NsNode.comment('au-start');
+    // it's actually not NsNode here
+    // as by this time, the NsNode
 
-    node.parentNode.replaceChild(locationEnd, node);
+    const commentNode = node as unknown as NsView;
+    // const locationEnd = NsNode.comment('au-end');
+    // const locationStart = NsNode.comment('au-start');
+    // node.parentNode.replaceChild(locationEnd, node);
+    
+    const locationEnd = new ContentView();
+    const locationStart = new ContentView();
+
+    (locationEnd as unknown as IIndexable).$start = locationStart;
+    (locationStart as unknown as IIndexable).$nodes = null;
+
+    replaceView(locationEnd, commentNode);
+    insertBefore(locationStart, locationEnd);
+
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-    locationEnd.parentNode!.insertBefore(locationStart, locationEnd);
+    // locationEnd.parentNode!.insertBefore(locationStart, locationEnd);
 
-    (locationEnd as IRenderLocation).$start = locationStart as IRenderLocation;
-    (locationStart as IRenderLocation).$nodes = null!;
+    // (locationEnd as IRenderLocation).$start = locationStart as IRenderLocation;
+    // (locationStart as IRenderLocation).$nodes = null!;
 
-    return locationEnd as IRenderLocation<NsNode> & NsNode;
+    // return locationEnd as IRenderLocation<NsNode> & NsNode;
+    return locationEnd as unknown as IRenderLocation<NsNode> & NsNode;
   }
 
   public createDocumentFragment(nodeOrText?: NsNode | string): NsNode {
@@ -302,9 +317,8 @@ export class NsNodeSequence implements INodeSequence<NsView> {
     return targets;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public insertBefore(refNode: NsView): void {
-    throw new Error('Not implemented');
+    insertManyViewsBefore(this.childNodes, refNode);
   }
 
   public appendTo(parent: NsView): void {
@@ -318,16 +332,16 @@ export class NsNodeSequence implements INodeSequence<NsView> {
   }
 
   public addToLinked(): void {
-    throw new Error('Not implemented: NsNodeSequence: addToLinked');
+    console.warn('Not implemented: NsNodeSequence: addToLinked');
   }
 
   public unlink(): void {
-    throw new Error('Not implemented: NsNodeSequence: unlink');
+    console.info('Not implemented: NsNodeSequence: unlink');
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public link(next: NsNodeSequence | IRenderLocation<NsNode> | undefined): void {
-    throw new Error('Not implemented: NsNodeSequence.link');
+    console.warn('Not implemented: NsNodeSequence.link');
   }
 }
 
