@@ -13,6 +13,36 @@ export default class App {
     { tab: 'Details' }
   ]
 
+  contacts = [
+    { name: 'Andrea' },
+    { name: 'Patria' },
+    { name: 'Kiri' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+    { name: 'Andrew' },
+    { name: 'Samuel' },
+    { name: 'Pixi' },
+  ]
+
   constructor(
     private readonly view: Page,
     private readonly viewComposer: IViewComposer

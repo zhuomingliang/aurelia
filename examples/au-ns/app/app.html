@@ -7,9 +7,18 @@
       <TabStripItem title="Details" />
     </TabStrip>
     <TabContentItem>
-      <GridLayout>
-        <Label text="Home Page" class="h2 text-center"></Label>
-      </GridLayout>
+      <ScrollView height="100%">
+        <StackLayout>
+          <Label
+            repeat.for="contact of contacts"
+            text.bind="contact.name"
+            class="h2 text-center"
+            width="100%"
+            height="50"
+            backgroundColor="darkgreen"
+            color="white"></Label>
+        </StackLayout>
+      </ScrollView>
     </TabContentItem>
     <TabContentItem>
       <GridLayout>
