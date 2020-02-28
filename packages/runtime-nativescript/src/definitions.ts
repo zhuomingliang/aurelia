@@ -6,6 +6,7 @@ import {
   ITargetedInstruction,
   NodeInstruction
 } from '@aurelia/runtime';
+import { NsNode } from './dom';
 
 export const enum NsTargetedInstructionType {
   textBinding = 'na',
@@ -13,7 +14,7 @@ export const enum NsTargetedInstructionType {
   attributeBinding = 'nc',
   stylePropertyBinding = 'nd',
   setAttribute = 'ne',
-  setClassAttribute = 'nf',
+  listItemTemplates = 'nf',
   setStyleAttribute = 'ng',
 }
 
@@ -60,4 +61,13 @@ export interface IAttributeBindingInstruction extends ITargetedInstruction {
    */
   attr: string;
   to: string;
+}
+
+export interface IListItemTemplatesBindingInstruction extends ITargetedInstruction {
+  type: NsTargetedInstructionType.listItemTemplates;
+  /**
+   * An array of NsNode, with each NsNode represents a template with corresponding key
+   * The NsNode that represents the root node of the itemTemplate
+   */
+  templates: NsNode[];
 }

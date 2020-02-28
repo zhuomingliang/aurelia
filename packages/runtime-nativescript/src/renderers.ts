@@ -21,16 +21,23 @@ import {
   ICustomElementViewModel,
   ILifecycle,
   Controller,
+  getRenderContext,
+  ITemplateCompiler,
 } from '@aurelia/runtime';
 import { Listener } from './binding/listener';
 import {
   NsTargetedInstructionType,
   IListenerBindingInstruction,
   ITextBindingInstruction,
+  IListItemTemplatesBindingInstruction,
 } from './definitions';
 import { IEventManager } from './observation/event-manager';
 import { NsNode, NsView } from './dom';
 import { IIndexable, Metadata } from '@aurelia/kernel';
+import {
+  Template as $NsTemplateFactory,
+  KeyedTemplate as $NsKeyedTemplate
+} from '@nativescript/core';
 
 // @instructionRenderer(TargetedInstructionType.hydrateElement)
 // /** @internal */
@@ -149,6 +156,38 @@ export class ListenerBindingRenderer implements IInstructionRenderer {
       context,
     );
     controller.addBinding(binding);
+  }
+}
+
+@instructionRenderer(NsTargetedInstructionType.listItemTemplates)
+export class ListItemTemplatesRenderer implements IInstructionRenderer {
+
+  public constructor(
+    @ITemplateCompiler private readonly compiler: ITemplateCompiler
+  ) {
+  }
+
+  public render(
+    flags: LifecycleFlags,
+    context: ICompiledRenderContext,
+    controller: IRenderableController,
+    target: NsView,
+    instruction: IListItemTemplatesBindingInstruction
+  ): void {
+    const templateFns: $NsKeyedTemplate[] = instruction.templates.map(nsNode => {
+      const key = nsNode.attributes?.key || '';
+      // const a = getRenderContext()
+      // const templateDefinition = this.compiler.compile({ name: key, template: nsNode }, context);
+      const renderContext = getRenderContext({ name: key, template: nsNode }, context, undefined);
+      const syntheticView = Controller.forSyntheticView(renderContext.getViewFactory()!, context.get(ILifecycle), context, flags);
+      return {
+        key: key,
+        createView: () => {
+          return syntheticView.nodes.firstChild;
+          // return null!;
+        }
+      } as $NsKeyedTemplate;
+    });
   }
 }
 

@@ -7,8 +7,10 @@ import {
 import {
   NsTargetedInstructionType,
   IListenerBindingInstruction,
-  ITextBindingInstruction
+  ITextBindingInstruction,
+  IListItemTemplatesBindingInstruction
 } from './definitions';
+import { NsNode } from './dom';
 
 export class NsTextBindingInstruction implements ITextBindingInstruction {
   public type: NsTargetedInstructionType.textBinding = NsTargetedInstructionType.textBinding;
@@ -27,5 +29,12 @@ export class NsTriggerBindingInstruction implements IListenerBindingInstruction 
   public constructor(
     public from: string | IsBindingBehavior,
     public to: string,
+  ) {}
+}
+
+export class NsListItemTemplatesInstruction implements IListItemTemplatesBindingInstruction {
+  public readonly type: NsTargetedInstructionType.listItemTemplates = NsTargetedInstructionType.listItemTemplates;
+  public constructor(
+    public readonly templates: NsNode[]
   ) {}
 }

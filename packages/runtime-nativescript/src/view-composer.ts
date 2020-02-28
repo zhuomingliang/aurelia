@@ -58,4 +58,9 @@ export class ViewComposer implements IViewComposer {
 
     return host;
   }
+
+  public composeFactory<T extends NsView = NsView>(): () => T {
+
+    return () => null!;
+  }
 }
